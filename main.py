@@ -1,5 +1,7 @@
 from src.linpreds import *
 
-gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=1000)
-gridw = gridw_sampler.sample(n_preds=4)
-gridw.to_prism("grid.prism", grid_size=1000)
+grid_size = 50
+gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=grid_size)
+gridw = gridw_sampler.sample(n_preds=7)
+gridw.to_prism("grid.prism", grid_size=grid_size)
+gridw.draw(grid_size=grid_size)

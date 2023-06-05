@@ -2,6 +2,7 @@ from enum import Enum
 from itertools import chain, combinations
 import random
 from typing import Dict, Iterable, List, Optional, Tuple, TypeVar
+import drawsvg as dw
 
 Point = Tuple[int, int]
 
@@ -37,7 +38,7 @@ class LinearPredicate:
         scaled_p1, scaled_p2 = self._scale_points(grid_size)
         (v11, v12), (v21, v22) = _p_diff(p, scaled_p1), _p_diff(scaled_p2, scaled_p1)
 
-        # compute detemrinant of two vectors and decide based on >= 0
+        # compute determinant of two vectors and decide based on >= 0
         return ((v11 * v22) - (v12 * v21)) >= 0
 
     def predicate_string(self, pos: bool, grid_size: Optional[int]) -> str:
@@ -63,6 +64,21 @@ class LinearPredicate:
         self._scale_cache[scale_factor] = scaled_p1, scaled_p2
         return scaled_p1, scaled_p2
 
+    def draw(
+        self, drawing: dw.Drawing, grid_size: Optional[int], scale: int, p: int
+    ) -> None:
+        (x1, y1), (x2, y2) = self._scale_points(grid_size)
+        drawing.append(
+            dw.Line(
+                p + scale * x1,
+                p + scale * y1,
+                p + scale * x2,
+                p + scale * y2,
+                stroke_width=2,
+                stroke="magenta",
+            )
+        )
+
 
 class LinearPredicateSampler:
     def __init__(self, predicate_grid_size=1000) -> None:
@@ -79,6 +95,16 @@ class LinearPredicateSampler:
         # convert to points
         p1 = self._convert_side_to_point(sides[0], p1)
         p2 = self._convert_side_to_point(sides[1], p2)
+
+        # sometimes we might sample on the edges, in this case we want to extend the line completely altho not completely necessary
+        # looks neater in the generated images
+
+        if p1[0] == p2[0]:
+            p1: Point = (p1[0], 0)
+            p2: Point = (p1[0], self.predicate_grid_size)
+        elif p1[1] == p2[1]:
+            p1: Point = (0, p1[1])
+            p2: Point = (self.predicate_grid_size, p1[1])
 
         return LinearPredicate(p1, p2, self.predicate_grid_size)
 
@@ -189,6 +215,90 @@ class LinearPredicatesGridWorld:
             f.writelines("endmodule\n\n")
 
             f.writelines((f'label "target" = {region_pred};\n\n',))
+
+    def draw(self, filename="grid.png", grid_size=1000) -> None:
+        scale = 30
+        p = 20
+        # we have to do +1 to grid size because our grid starts from (0,0) and goes till (grid_size, grid_size)
+        d = dw.Drawing(
+            (grid_size + 1) * scale + p,
+            (grid_size + 1) * scale + p,
+            id_prefix="grid",
+        )
+
+        d.append(
+            dw.Rectangle(
+                0,
+                0,
+                (grid_size + 1) * scale + p,
+                (grid_size + 1) * scale + p,
+                fill="black",
+            )
+        )
+
+        for x in range(p, p + (grid_size + 1) * scale, scale):
+            for y in range(p, p + (grid_size + 1) * scale, scale):
+                d.append(dw.Circle(x, y, 2, stroke="white", fill="white"))
+
+        for pred in self.preds:
+            pred.draw(d, grid_size, scale, p)
+
+        dir_line_width = 13
+        for x in range(grid_size + 1):
+            for y in range(grid_size + 1):
+                x_fig, y_fig = p + (x * scale), p + (y * scale)
+                if x == grid_size and y == grid_size:
+                    d.append(dw.Circle(x_fig, y_fig, 2, stroke="red", fill="red"))
+                region = self._region_of_point((x, y), grid_size)
+                for dir in DirectionSets[self.actions[region]]:
+                    if dir == Direction.L:
+                        d.append(
+                            dw.Line(
+                                x_fig,
+                                y_fig,
+                                x_fig - dir_line_width,
+                                y_fig,
+                                stroke="green",
+                                stroke_width=2,
+                            )
+                        )
+                    elif dir == Direction.R:
+                        d.append(
+                            dw.Line(
+                                x_fig,
+                                y_fig,
+                                x_fig + dir_line_width,
+                                y_fig,
+                                stroke="green",
+                                stroke_width=2,
+                            )
+                        )
+                    elif dir == Direction.U:
+                        d.append(
+                            dw.Line(
+                                x_fig,
+                                y_fig,
+                                x_fig,
+                                y_fig - dir_line_width,
+                                stroke="green",
+                                stroke_width=2,
+                            )
+                        )
+                    elif dir == Direction.D:
+                        d.append(
+                            dw.Line(
+                                x_fig,
+                                y_fig,
+                                x_fig,
+                                y_fig + dir_line_width,
+                                stroke="green",
+                                stroke_width=2,
+                            )
+                        )
+                    else:
+                        raise ValueError
+
+        d.save_png(filename)
 
 
 class LinearPredicatesGridWorldSampler:
