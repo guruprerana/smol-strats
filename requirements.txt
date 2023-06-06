@@ -1,1 +1,2 @@
 drawsvg[all]==2.1.1
+gmpy2==2.1.5
