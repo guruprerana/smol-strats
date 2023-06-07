@@ -1,12 +1,13 @@
 from __future__ import annotations
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, List, Optional, Set, Union
 from gmpy2 import mpq
+import drawsvg as dw
 
-from linpreds import LinearPredicate, LinearPredicatesGridWorld
+from src.linpreds import Direction, DirectionSets, LinearPredicatesGridWorld
 
 
 class Vertex:
-    def __init__(self, x: mpq, y: mpq) -> None:
+    def __init__(self, x: Union[mpq, int], y: Union[mpq, int]) -> None:
         self.x = mpq(x)
         self.y = mpq(y)
 
@@ -24,11 +25,17 @@ class Vertex:
 
     def __eq__(self, v: object) -> bool:
         if not isinstance(v, self.__class__):
-            raise TypeError
+            return False
         return self.x == v.x and self.y == v.y
 
     def __hash__(self) -> int:
         return hash((self.x, self.y))
+
+    def __repr__(self) -> str:
+        return f"Vertex({self.x}, {self.y})"
+
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y})"
 
 
 def det(v1: Vertex, v2: Vertex) -> mpq:
@@ -62,12 +69,12 @@ class HalfEdge:
         self,
         start: Vertex,
         end: Vertex,
-        next: Optional[HalfEdge],
-        prev: Optional[HalfEdge],
-        opp: Optional[HalfEdge],
-        actions: Optional[int],
+        next: Optional[HalfEdge] = None,
+        prev: Optional[HalfEdge] = None,
+        opp: Optional[HalfEdge] = None,
+        actions: Optional[int] = None,
     ) -> None:
-        assert self.start != self.end
+        assert start != end
         self.start = start
         self.end = end
         self.next = next
@@ -75,13 +82,11 @@ class HalfEdge:
         self.opp = opp
         self.actions = actions
 
-    def __eq__(self, e: object) -> bool:
-        if not isinstance(e, self.__class__):
-            raise TypeError
-        return self.start == e.start and self.end == e.end
-
     def __hash__(self) -> int:
         return hash((self.start, self.end))
+
+    def __repr__(self) -> str:
+        return f"HalfEdge({str(self.start)}, {str(self.end)})"
 
     def intersects_edge(self, e: HalfEdge) -> Optional[Vertex]:
         """Determines whether edge intersects another edge e
@@ -135,7 +140,7 @@ class HalfEdge:
             raise ValueError
 
         e1 = HalfEdge(self.start, v, prev=self.prev, actions=self.actions)
-        e2 = HalfEdge(v, self.end, next=self.next, actions=self.actions)
+        e2 = HalfEdge(v, self.end, next=self.next, prev=e1, actions=self.actions)
         self.prev.next = e1
         self.next.prev = e2
         e1.next = e2
@@ -153,6 +158,7 @@ class HalfEdge:
                 v,
                 self.start,
                 next=self.opp.next,
+                prev=eopp1,
                 opp=e1,
                 actions=self.opp.actions,
             )
@@ -276,9 +282,15 @@ class HalfEdge:
 
 
 class PolygonGridWorld:
-    def __init__(self, root: HalfEdge, target: HalfEdge) -> None:
+    def __init__(
+        self,
+        root: Optional[HalfEdge] = None,
+        target: Optional[HalfEdge] = None,
+        grid_size: Optional[int] = None,
+    ) -> None:
         self.root = root
         self.target = target
+        self.grid_size = grid_size
 
     def traverse(self, f: Callable[[HalfEdge], None]) -> None:
         """Calls the function f on each HalfEdge in the grid world.
@@ -290,8 +302,10 @@ class PolygonGridWorld:
         visited: Set[HalfEdge] = set()
         to_visit = [self.root]
 
-        while to_visit:
+        while len(to_visit) > 0:
             e = to_visit.pop()
+            if e in visited:
+                continue
 
             f(e)
             visited.add(e)
@@ -308,6 +322,138 @@ class PolygonGridWorld:
                     to_visit.append(e1.opp)
                 e1 = e1.next
 
+    def traverse_polygons(self, f: Callable[[HalfEdge], None]) -> None:
+        """Calls the function f exactly once on a certain HalfEdge in each polygon
+        in the grid world.
+
+        Args:
+            f (Callable[[HalfEdge], None]): the function which is called on the HalfEdges
+        """
+        visited: Set[HalfEdge] = set()
+        to_visit = [self.root]
+
+        while len(to_visit) > 0:
+            e = to_visit.pop()
+            if e in visited:
+                continue
+
+            f(e)
+            visited.add(e)
+            if e.opp and e.opp not in visited:
+                to_visit.append(e.opp)
+
+            e1 = e.next
+            while e1 != e:
+                visited.add(e1)
+
+                if e1.opp and e1.opp not in visited:
+                    to_visit.append(e1.opp)
+
+                e1 = e1.next
+
+    def draw(self, filename="polygon-grid.png") -> None:
+        scale = 30
+        p = 20
+
+        grid_size = self.grid_size if self.grid_size is not None else 1000
+        d = dw.Drawing(
+            (grid_size + 1) * scale + p,
+            (grid_size + 1) * scale + p,
+            id_prefix="grid",
+        )
+        # background
+        d.append(
+            dw.Rectangle(
+                0,
+                0,
+                (grid_size + 1) * scale + p,
+                (grid_size + 1) * scale + p,
+                fill="black",
+            )
+        )
+
+        def draw_edge(e: HalfEdge) -> None:
+            (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
+            d.append(
+                dw.Line(
+                    float(p + scale * x1),
+                    float(p + scale * y1),
+                    float(p + scale * x2),
+                    float(p + scale * y2),
+                    stroke_width=2,
+                    stroke="magenta",
+                )
+            )
+
+        def draw_directions(e: HalfEdge) -> None:
+            total = e.start
+            n = 1
+
+            e1 = e.next
+            while e1 != e:
+                total += e1.start
+                n += 1
+                e1 = e1.next
+
+            # we want to draw the directions at the center of the polygon
+            dir_line_width = 30
+            x, y = (total.x / n, total.y / n)
+            x_fig, y_fig = float(p + (x * scale)), float(p + (y * scale))
+
+            for dir in DirectionSets[e.actions]:
+                if dir == Direction.L:
+                    d.append(
+                        dw.Line(
+                            x_fig,
+                            y_fig,
+                            x_fig - dir_line_width,
+                            y_fig,
+                            stroke="green",
+                            stroke_width=2,
+                        )
+                    )
+                elif dir == Direction.R:
+                    d.append(
+                        dw.Line(
+                            x_fig,
+                            y_fig,
+                            x_fig + dir_line_width,
+                            y_fig,
+                            stroke="green",
+                            stroke_width=2,
+                        )
+                    )
+                elif dir == Direction.U:
+                    d.append(
+                        dw.Line(
+                            x_fig,
+                            y_fig,
+                            x_fig,
+                            y_fig - dir_line_width,
+                            stroke="green",
+                            stroke_width=2,
+                        )
+                    )
+                elif dir == Direction.D:
+                    d.append(
+                        dw.Line(
+                            x_fig,
+                            y_fig,
+                            x_fig,
+                            y_fig + dir_line_width,
+                            stroke="green",
+                            stroke_width=2,
+                        )
+                    )
+                else:
+                    raise ValueError
+
+                d.append(dw.Circle(x_fig, y_fig, 2, stroke="white", fill="white"))
+
+        self.traverse(draw_edge)
+        self.traverse_polygons(draw_directions)
+        d.save_png(filename)
+
 
 def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWorld:
     size = lingrid.predicate_grid_size
@@ -320,6 +466,7 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
         Vertex(0, size), Vertex(0, 0), next=outer_edge1, prev=outer_edge3
     )
     outer_edge3.next = outer_edge4
+    outer_edge1.prev = outer_edge4
 
     outer_edges = [outer_edge1, outer_edge2, outer_edge3, outer_edge4]
     preds_half_edges: List[HalfEdge] = []
@@ -341,7 +488,8 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
 
             # add vertex
             e1 = edge.add_vertex(intersection)
-            new_outer_edges.append(e1, e1.next)
+            intersecting_edges.append(e1)
+            new_outer_edges.extend((e1, e1.next))
 
         outer_edges = new_outer_edges
 
@@ -349,7 +497,7 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
             intersecting_edges[0].add_intersection_edge(pred_edge)
 
     root = outer_edges[0]
-    grid_world = PolygonGridWorld(root)
+    grid_world = PolygonGridWorld(root, grid_size=lingrid.predicate_grid_size)
 
     target_region = lingrid._region_of_point((size, size), None)
     target_edges: List[HalfEdge] = []
