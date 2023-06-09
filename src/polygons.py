@@ -93,6 +93,7 @@ class HalfEdge:
         edge = self.next
         while edge != self:
             yield edge
+            edge = edge.next
 
     def intersects_edge(self, e: HalfEdge) -> Optional[Vertex]:
         """Determines whether edge intersects another edge e
@@ -357,15 +358,24 @@ class PolygonGridWorld:
 
                 e1 = e1.next
 
-    def draw(self, filename="polygon-grid.png") -> None:
-        scale = 30
-        p = 20
-
+    def draw(
+        self,
+        filename="polygon-grid.png",
+        drawing: Optional[dw.Drawing] = None,
+        scale=30,
+        p=20,
+        dir_line_width=30,
+        save=True,
+    ) -> None:
         grid_size = self.grid_size if self.grid_size is not None else 1000
-        d = dw.Drawing(
-            (grid_size + 1) * scale + p,
-            (grid_size + 1) * scale + p,
-            id_prefix="grid",
+        d = (
+            drawing
+            if drawing is not None
+            else dw.Drawing(
+                (grid_size + 1) * scale + p,
+                (grid_size + 1) * scale + p,
+                id_prefix="grid",
+            )
         )
         # background
         d.append(
@@ -402,7 +412,7 @@ class PolygonGridWorld:
                 e1 = e1.next
 
             # we want to draw the directions at the center of the polygon
-            dir_line_width = 30
+            # dir_line_width = 30
             x, y = (total.x / n, total.y / n)
             x_fig, y_fig = float(p + (x * scale)), float(p + (y * scale))
 
@@ -458,7 +468,8 @@ class PolygonGridWorld:
 
         self.traverse(draw_edge)
         self.traverse_polygons(draw_directions)
-        d.save_png(filename)
+        if save:
+            d.save_png(filename)
 
 
 def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWorld:

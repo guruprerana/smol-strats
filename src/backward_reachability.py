@@ -1,9 +1,11 @@
 from __future__ import annotations
 from collections import defaultdict
+import math
 from typing import Dict, Iterable, List, Optional
-from linpreds import Direction, DirectionSets
-from polygons import HalfEdge, PolygonGridWorld, Vertex, det, dot
+from src.linpreds import Direction, DirectionSets
+from src.polygons import HalfEdge, PolygonGridWorld, Vertex, det, dot
 from gmpy2 import mpq
+import drawsvg as dw
 
 
 def leq(v1: Vertex, v2: Vertex) -> bool:
@@ -21,7 +23,7 @@ def leq(v1: Vertex, v2: Vertex) -> bool:
 
 class VertexInterval:
     def __init__(
-        self, start: Vertex, end: Vertex, edge: Optional[HalfEdge] = None
+        self, start: Vertex = None, end: Vertex = None, edge: Optional[HalfEdge] = None
     ) -> None:
         if edge:
             start, end = edge.start, edge.end
@@ -116,7 +118,9 @@ class VertexInterval:
             List[VertexInterval]: intersection of self within the specified x-coordinate bounds
         """
         if self.start.x == self.end.x:
-            if lower <= self.start.x <= upper:
+            if (not lower or lower <= self.start.x) and (
+                not upper or self.start.x <= upper
+            ):
                 return [self.copy()]
             else:
                 return []
@@ -154,7 +158,9 @@ class VertexInterval:
             List[VertexInterval]: intersection of self within the specified y-coordinate bounds
         """
         if self.start.y == self.end.y:
-            if lower <= self.start.y <= upper:
+            if (not lower or lower <= self.start.y) and (
+                not upper or self.start.y <= upper
+            ):
                 return [self.copy()]
             else:
                 return []
@@ -221,9 +227,7 @@ class BackwardReachabilityTree:
 
         assert polygrid.target is not None
 
-        self.edges_to_nodes: Dict[
-            HalfEdge, List[BackwardReachabilityTreeNode]
-        ] = defaultdict(default_factory=lambda _: [])
+        self.edges_to_nodes: Dict[HalfEdge, List[BackwardReachabilityTreeNode]] = dict()
 
         def tree_node_from_target_edge(
             target_edge: HalfEdge,
@@ -238,7 +242,7 @@ class BackwardReachabilityTree:
 
         self.roots = [
             tree_node_from_target_edge(edge)
-            for edge in polygrid.target.edges_in_polygon
+            for edge in polygrid.target.edges_in_polygon()
         ]
         self.leaves = self.roots
 
@@ -290,6 +294,9 @@ class BackwardReachabilityTree:
                 for vi in x_filter:
                     y_filter.extend(vi.intersect_y_bounds(y_bounds[0], y_bounds[1]))
 
+                if next_edge not in self.edges_to_nodes:
+                    self.edges_to_nodes[next_edge] = []
+
                 for vi in y_filter:
                     unexplored_filter = vi.difference_intervals(
                         [node.edge for node in self.edges_to_nodes[next_edge]]
@@ -306,7 +313,63 @@ class BackwardReachabilityTree:
         self.leaves = new_leaves
         return added_nodes
 
-    def construct_tree(self, max_depth=1000) -> None:
+    def construct_tree(self, max_depth=2) -> None:
         i = 0
         while i < max_depth and self.grow():
             i += 1
+
+    def draw(
+        self,
+        filename="backward-graph.png",
+        drawing: Optional[dw.Drawing] = None,
+        scale=30,
+        p=20,
+        dir_line_width=30,
+        save=True,
+    ) -> None:
+        grid_size = (
+            self.polygrid.grid_size if self.polygrid.grid_size is not None else 1000
+        )
+        d = (
+            drawing
+            if drawing is not None
+            else dw.Drawing(
+                (grid_size + 1) * scale + p,
+                (grid_size + 1) * scale + p,
+                id_prefix="grid",
+            )
+        )
+
+        self.polygrid.draw(None, d, dir_line_width=0, save=False)
+
+        def draw_edge(e: VertexInterval) -> None:
+            (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
+            d.append(
+                dw.Line(
+                    float(p + scale * x1),
+                    float(p + scale * y1),
+                    float(p + scale * x2),
+                    float(p + scale * y2),
+                    stroke_width=2,
+                    stroke="white",
+                )
+            )
+
+        def draw_link(e1: VertexInterval, e2: VertexInterval) -> None:
+            draw_edge(
+                VertexInterval(
+                    (e1.start + e1.end).mult_const(mpq(1, 2)),
+                    (e2.start + e2.end).mult_const(mpq(1, 2)),
+                )
+            )
+
+        to_draw = [node for node in self.roots]
+        while len(to_draw) > 0:
+            node = to_draw.pop()
+            draw_edge(node.edge)
+            for node1 in node.backward_nodes:
+                to_draw.append(node1)
+                draw_link(node.edge, node1.edge)
+
+        if save:
+            d.save_png(filename)
