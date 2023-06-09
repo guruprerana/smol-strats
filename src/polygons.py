@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, List, Optional, Set, Union
+from typing import Callable, Generator, List, Optional, Set, Union
 from gmpy2 import mpq
 import drawsvg as dw
 
@@ -87,6 +87,12 @@ class HalfEdge:
 
     def __repr__(self) -> str:
         return f"HalfEdge({str(self.start)}, {str(self.end)})"
+
+    def edges_in_polygon(self) -> Generator[HalfEdge, None, None]:
+        yield self
+        edge = self.next
+        while edge != self:
+            yield edge
 
     def intersects_edge(self, e: HalfEdge) -> Optional[Vertex]:
         """Determines whether edge intersects another edge e
