@@ -32,6 +32,20 @@ class VertexInterval:
         self.start: Vertex = start
         self.end: Vertex = end
 
+    def __repr__(self) -> str:
+        return f"VertexInterval({self.start}, {self.end})"
+
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __hash__(self) -> int:
+        return hash((self.start, self.end))
+
+    def __eq__(self, o: object) -> bool:
+        if not isinstance(o, self.__class__):
+            return False
+        return self.start == o.start and self.end == o.end
+
     def det(self, vi: VertexInterval) -> mpq:
         """Determinant of two vertex intervals interpreted as vectors in 2D space
 
@@ -78,7 +92,9 @@ class VertexInterval:
             and det(vi.start - self.start, self.end - self.start) == mpq(0)
             and self.dot(vi) >= mpq(0)
         )
-        if leq(vi.end, self.start) or leq(self.end, vi.start):
+        if leq(vi.start, self.start) and leq(self.end, vi.end):
+            return []
+        elif leq(vi.end, self.start) or leq(self.end, vi.start):
             return [self.copy()]
         elif leq(vi.start, self.start) and leq(vi.end, self.end):
             return [VertexInterval(vi.end, self.end)]
@@ -220,6 +236,13 @@ class BackwardReachabilityTreeNode:
     def add_backward_node(self, node: BackwardReachabilityTreeNode) -> None:
         self.backward_nodes.append(node)
 
+    def print_str(self) -> List[str]:
+        res = [f"Node({self.edge.start}, {self.edge.end} -> {str(self.linked_edge)})"]
+        for node in self.backward_nodes:
+            res.extend(f"\t{child_str}" for child_str in node.print_str())
+
+        return res
+
 
 class BackwardReachabilityTree:
     def __init__(self, polygrid: PolygonGridWorld) -> None:
@@ -227,17 +250,20 @@ class BackwardReachabilityTree:
 
         assert polygrid.target is not None
 
-        self.edges_to_nodes: Dict[HalfEdge, List[BackwardReachabilityTreeNode]] = dict()
+        self.edges_to_nodes: Dict[
+            VertexInterval, List[BackwardReachabilityTreeNode]
+        ] = dict()
 
         def tree_node_from_target_edge(
             target_edge: HalfEdge,
         ) -> BackwardReachabilityTreeNode:
+            vi_target_edge = VertexInterval(edge=target_edge)
             node = BackwardReachabilityTreeNode(
-                VertexInterval(target_edge.start, target_edge.end),
+                vi_target_edge,
                 target_edge,
                 contains_target=True,
             )
-            self.edges_to_nodes[target_edge] = [node]
+            self.edges_to_nodes[vi_target_edge] = [node]
             return node
 
         self.roots = [
@@ -264,12 +290,12 @@ class BackwardReachabilityTree:
 
             opp_edge = leaf.linked_edge.opp
             x_bounds = [
-                min(opp_edge.start.x, opp_edge.end.x),
-                max(opp_edge.start.x, opp_edge.start.x),
+                min(leaf.edge.start.x, leaf.edge.end.x),
+                max(leaf.edge.start.x, leaf.edge.end.x),
             ]
             y_bounds = [
-                min(opp_edge.start.y, opp_edge.end.y),
-                max(opp_edge.start.y, opp_edge.start.y),
+                min(leaf.edge.start.y, leaf.edge.end.y),
+                max(leaf.edge.start.y, leaf.edge.end.y),
             ]
 
             if not opp_edge.actions:
@@ -286,20 +312,19 @@ class BackwardReachabilityTree:
                 else:
                     raise ValueError
 
-            next_edge = opp_edge.next
-            while next_edge != opp_edge:
-                vi = VertexInterval(edge=next_edge)
-                x_filter = vi.intersect_x_bounds(x_bounds[0], x_bounds[1])
+            for next_edge in opp_edge.edges_in_polygon():
+                vi_next_edge = VertexInterval(edge=next_edge)
+                x_filter = vi_next_edge.intersect_x_bounds(x_bounds[0], x_bounds[1])
                 y_filter: List[VertexInterval] = []
                 for vi in x_filter:
                     y_filter.extend(vi.intersect_y_bounds(y_bounds[0], y_bounds[1]))
 
-                if next_edge not in self.edges_to_nodes:
-                    self.edges_to_nodes[next_edge] = []
+                if vi_next_edge not in self.edges_to_nodes:
+                    self.edges_to_nodes[vi_next_edge] = []
 
                 for vi in y_filter:
                     unexplored_filter = vi.difference_intervals(
-                        [node.edge for node in self.edges_to_nodes[next_edge]]
+                        [node.edge for node in self.edges_to_nodes[vi_next_edge]]
                     )
 
                     for new_vi in unexplored_filter:
@@ -307,13 +332,12 @@ class BackwardReachabilityTree:
                         added_nodes = True
                         leaf.add_backward_node(new_node)
                         new_leaves.append(new_node)
-                        self.edges_to_nodes[next_edge].append(new_node)
-                next_edge = next_edge.next
+                        self.edges_to_nodes[vi_next_edge].append(new_node)
 
         self.leaves = new_leaves
         return added_nodes
 
-    def construct_tree(self, max_depth=2) -> None:
+    def construct_tree(self, max_depth=100) -> None:
         i = 0
         while i < max_depth and self.grow():
             i += 1
@@ -324,7 +348,6 @@ class BackwardReachabilityTree:
         drawing: Optional[dw.Drawing] = None,
         scale=30,
         p=20,
-        dir_line_width=30,
         save=True,
     ) -> None:
         grid_size = (
@@ -337,12 +360,13 @@ class BackwardReachabilityTree:
                 (grid_size + 1) * scale + p,
                 (grid_size + 1) * scale + p,
                 id_prefix="grid",
+                context=dw.Context(invert_y=True),
             )
         )
 
         self.polygrid.draw(None, d, dir_line_width=0, save=False)
 
-        def draw_edge(e: VertexInterval) -> None:
+        def draw_edge(e: VertexInterval, color="white") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
             d.append(
                 dw.Line(
@@ -351,7 +375,7 @@ class BackwardReachabilityTree:
                     float(p + scale * x2),
                     float(p + scale * y2),
                     stroke_width=2,
-                    stroke="white",
+                    stroke=color,
                 )
             )
 
@@ -360,7 +384,8 @@ class BackwardReachabilityTree:
                 VertexInterval(
                     (e1.start + e1.end).mult_const(mpq(1, 2)),
                     (e2.start + e2.end).mult_const(mpq(1, 2)),
-                )
+                ),
+                color="green",
             )
 
         to_draw = [node for node in self.roots]
@@ -373,3 +398,7 @@ class BackwardReachabilityTree:
 
         if save:
             d.save_png(filename)
+
+    def print(self) -> None:
+        for root in self.roots:
+            print("\n".join(root.print_str()))

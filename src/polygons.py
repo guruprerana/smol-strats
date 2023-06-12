@@ -95,6 +95,21 @@ class HalfEdge:
             yield edge
             edge = edge.next
 
+    def navigate(self, path: str) -> HalfEdge:
+        pt = self
+        for p in path:
+            if p == "n":
+                pt = pt.next
+            elif p == "p":
+                pt = pt.prev
+            elif p == "o":
+                if not pt.opp:
+                    raise ValueError
+                pt = pt.opp
+            else:
+                raise ValueError
+        return pt
+
     def intersects_edge(self, e: HalfEdge) -> Optional[Vertex]:
         """Determines whether edge intersects another edge e
 
@@ -240,7 +255,7 @@ class HalfEdge:
             raise ValueError
 
         e_int = self.next
-        while e_int != self.next:
+        while e_int != self:
             if e_int.end == v:
                 break
             e_int = e_int.next
@@ -286,6 +301,11 @@ class HalfEdge:
             return self.next.determine_side(e)
         else:
             raise ValueError
+
+    def assign_action_polygon(self, actions: int) -> None:
+        assert 0 <= actions < 1 << 4
+        for edge in self.edges_in_polygon():
+            edge.actions = actions
 
 
 class PolygonGridWorld:
@@ -375,6 +395,7 @@ class PolygonGridWorld:
                 (grid_size + 1) * scale + p,
                 (grid_size + 1) * scale + p,
                 id_prefix="grid",
+                context=dw.Context(invert_y=True),
             )
         )
         # background
@@ -402,6 +423,9 @@ class PolygonGridWorld:
             )
 
         def draw_directions(e: HalfEdge) -> None:
+            if not e.actions or dir_line_width == 0:
+                return
+
             total = e.start
             n = 1
 
@@ -445,7 +469,7 @@ class PolygonGridWorld:
                             x_fig,
                             y_fig,
                             x_fig,
-                            y_fig - dir_line_width,
+                            y_fig + dir_line_width,
                             stroke="green",
                             stroke_width=2,
                         )
@@ -456,7 +480,7 @@ class PolygonGridWorld:
                             x_fig,
                             y_fig,
                             x_fig,
-                            y_fig + dir_line_width,
+                            y_fig - dir_line_width,
                             stroke="green",
                             stroke_width=2,
                         )
@@ -470,6 +494,23 @@ class PolygonGridWorld:
         self.traverse_polygons(draw_directions)
         if save:
             d.save_png(filename)
+
+
+def simple_rectangular_polygon_gridw(size=1000) -> PolygonGridWorld:
+    outer_edge1 = HalfEdge(Vertex(0, 0), Vertex(size, 0))
+    outer_edge2 = HalfEdge(Vertex(size, 0), Vertex(size, size), prev=outer_edge1)
+    outer_edge1.next = outer_edge2
+    outer_edge3 = HalfEdge(Vertex(size, size), Vertex(0, size), prev=outer_edge2)
+    outer_edge2.next = outer_edge3
+    outer_edge4 = HalfEdge(
+        Vertex(0, size), Vertex(0, 0), next=outer_edge1, prev=outer_edge3
+    )
+    outer_edge3.next = outer_edge4
+    outer_edge1.prev = outer_edge4
+
+    grid_world = PolygonGridWorld(outer_edge1, grid_size=size)
+
+    return grid_world
 
 
 def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWorld:
@@ -514,7 +555,7 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
             intersecting_edges[0].add_intersection_edge(pred_edge)
 
     root = outer_edges[0]
-    grid_world = PolygonGridWorld(root, grid_size=lingrid.predicate_grid_size)
+    grid_world = PolygonGridWorld(root, grid_size=size)
 
     target_region = lingrid._region_of_point((size, size), None)
     target_edges: List[HalfEdge] = []

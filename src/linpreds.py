@@ -137,6 +137,17 @@ Direction = Enum("Direction", ["L", "R", "U", "D"])
 DirectionSets = list(powerset((Direction.L, Direction.R, Direction.U, Direction.D)))
 
 
+def actions_from_directions(dirs: Iterable[Direction]):
+    dirs_sorted = tuple(
+        [
+            dir
+            for dir in (Direction.L, Direction.R, Direction.U, Direction.D)
+            if dir in dirs
+        ]
+    )
+    return DirectionSets.index(dirs_sorted)
+
+
 class LinearPredicatesGridWorld:
     def __init__(self, preds: List[LinearPredicate], actions: List[int]) -> None:
         assert len(preds) > 0
@@ -224,6 +235,7 @@ class LinearPredicatesGridWorld:
             (grid_size + 1) * scale + p,
             (grid_size + 1) * scale + p,
             id_prefix="grid",
+            context=dw.Context(invert_y=True),
         )
 
         d.append(
@@ -279,7 +291,7 @@ class LinearPredicatesGridWorld:
                                 x_fig,
                                 y_fig,
                                 x_fig,
-                                y_fig - dir_line_width,
+                                y_fig + dir_line_width,
                                 stroke="green",
                                 stroke_width=2,
                             )
@@ -290,7 +302,7 @@ class LinearPredicatesGridWorld:
                                 x_fig,
                                 y_fig,
                                 x_fig,
-                                y_fig + dir_line_width,
+                                y_fig - dir_line_width,
                                 stroke="green",
                                 stroke_width=2,
                             )
