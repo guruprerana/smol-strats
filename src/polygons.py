@@ -102,6 +102,10 @@ class HalfEdge:
                 pt = pt.next
             elif p == "p":
                 pt = pt.prev
+            elif p == "f":
+                pt = pt.next.opp.next
+            elif p == "b":
+                pt = pt.prev.opp.prev
             elif p == "o":
                 if not pt.opp:
                     raise ValueError
@@ -409,7 +413,7 @@ class PolygonGridWorld:
             )
         )
 
-        def draw_edge(e: HalfEdge) -> None:
+        def draw_edge(e: HalfEdge, color="magenta") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
             d.append(
                 dw.Line(
@@ -418,7 +422,7 @@ class PolygonGridWorld:
                     float(p + scale * x2),
                     float(p + scale * y2),
                     stroke_width=2,
-                    stroke="magenta",
+                    stroke=color,
                 )
             )
 
@@ -492,6 +496,8 @@ class PolygonGridWorld:
 
         self.traverse(draw_edge)
         self.traverse_polygons(draw_directions)
+        for e in self.target.edges_in_polygon():
+            draw_edge(e, "orange")
         if save:
             d.save_png(filename)
 

@@ -298,9 +298,10 @@ class BackwardReachabilityTree:
                 max(leaf.edge.start.y, leaf.edge.end.y),
             ]
 
-            if not opp_edge.actions:
-                raise ValueError
-            for action in DirectionSets[opp_edge.actions]:
+            allowed_actions = (
+                DirectionSets[opp_edge.actions] if opp_edge.actions else []
+            )
+            for action in allowed_actions:
                 if action == Direction.L:
                     x_bounds[1] = None
                 elif action == Direction.R:
