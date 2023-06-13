@@ -57,6 +57,6 @@ def main():
     gridw.draw("src/benchmarks/spiral/polygon-grid.png")
 
     btree = BackwardReachabilityTree(gridw)
-    btree.construct_tree(max_depth=1)
-    btree.print()
+    btree.construct_tree(max_depth=1000)
+    # btree.print()
     btree.draw(filename="src/benchmarks/spiral/backward-graph.png")

@@ -173,21 +173,21 @@ class VertexInterval:
         Returns:
             List[VertexInterval]: intersection of self within the specified y-coordinate bounds
         """
-        if self.start.y == self.end.y:
-            if (not lower or lower <= self.start.y) and (
-                not upper or self.start.y <= upper
-            ):
+        start = min(self.start, self.end, key=lambda v: v.y)
+        end = max(self.start, self.end, key=lambda v: v.y)
+        if start.y == end.y:
+            if (not lower or lower <= start.y) and (not upper or start.y <= upper):
                 return [self.copy()]
             else:
                 return []
 
         t_lower = 0
         if lower is not None:
-            t_lower = (lower - self.start.y) / (self.end.y - self.start.y)
+            t_lower = (lower - start.y) / (end.y - start.y)
 
         t_upper = 1
         if upper is not None:
-            t_upper = (upper - self.start.y) / (self.end.y - self.start.y)
+            t_upper = (upper - start.y) / (end.y - start.y)
 
         t_lower = max(mpq(0), t_lower)
         t_upper = min(mpq(1), t_upper)
@@ -195,8 +195,8 @@ class VertexInterval:
         if t_lower > 1 or t_upper < 0:
             return []
 
-        v_lower = self.start + (self.end - self.start).mult_const(t_lower)
-        v_upper = self.start + (self.end - self.start).mult_const(t_upper)
+        v_lower = start + (end - start).mult_const(t_lower)
+        v_upper = start + (end - start).mult_const(t_upper)
 
         return [VertexInterval(v_lower, v_upper)]
 
@@ -236,8 +236,11 @@ class BackwardReachabilityTreeNode:
     def add_backward_node(self, node: BackwardReachabilityTreeNode) -> None:
         self.backward_nodes.append(node)
 
+    def __repr__(self) -> str:
+        return f"Node({self.edge.start}, {self.edge.end} -> {str(self.linked_edge)})"
+
     def print_str(self) -> List[str]:
-        res = [f"Node({self.edge.start}, {self.edge.end} -> {str(self.linked_edge)})"]
+        res = [repr(self)]
         for node in self.backward_nodes:
             res.extend(f"\t{child_str}" for child_str in node.print_str())
 
