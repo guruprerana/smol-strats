@@ -11,7 +11,7 @@ def halfedge_to_prism(edge: HalfEdge, grid_factor=100) -> str:
     )
 
     d = scaled_p2 - scaled_p1
-    return f"{d.x}*(y - {scaled_p2.x}) - {d.y}*(x - {scaled_p1.x}) >= 0"
+    return f"{d.x}*(y - {scaled_p2.y}) - {d.y}*(x - {scaled_p2.x}) >= 0"
 
 
 def polygon_to_prism(edge: HalfEdge, grid_factor=100) -> str:

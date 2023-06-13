@@ -8,4 +8,4 @@ Synthesizing compact strategies for MDPs specified in the PRISM syntax
 
 ## Important commands
 
-1. `storm --prism grid.prism --buildfull --prop "Pmax=? [ F \"target\" ]"`
+1. `storm --prism benchmarks/generated/generated.prism --prop "Pmax=? [ F \"target\" ]"`
