@@ -1,3 +1,4 @@
+from src.polygons.prism import polygon_grid_to_prism
 from src.backward_reachability import BackwardReachabilityTree
 from src.linpreds import Direction, actions_from_directions
 from src.polygons import HalfEdge, Vertex, simple_rectangular_polygon_gridw
@@ -54,9 +55,13 @@ def main():
     )
     gridw.root.assign_action_polygon(actions_from_directions([Direction.R]))
 
-    gridw.draw("src/benchmarks/spiral/polygon-grid.png")
+    gridw.draw("benchmarks/spiral/polygon-grid.png")
 
     btree = BackwardReachabilityTree(gridw)
-    btree.construct_tree(max_depth=1000)
+    btree.construct_tree(max_depth=100)
     # btree.print()
-    btree.draw(filename="src/benchmarks/spiral/backward-graph.png")
+    btree.draw(filename="benchmarks/spiral/backward-graph.png")
+
+    polygon_grid_to_prism(gridw, "benchmarks/spiral/spiral.prism", 100)
+
+    return gridw, btree

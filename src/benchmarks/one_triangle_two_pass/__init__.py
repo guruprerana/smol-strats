@@ -1,3 +1,4 @@
+from src.polygons.prism import polygon_grid_to_prism
 from src.backward_reachability import BackwardReachabilityTree
 from src.linpreds import Direction, actions_from_directions
 from src.polygons import Vertex, simple_rectangular_polygon_gridw
@@ -25,11 +26,15 @@ def main():
         actions_from_directions((Direction.L,))
     )
     gridw.target = gridw.root.next.opp.prev.opp
-    gridw.draw("src/benchmarks/one_triangle_two_pass/polygon-grid.png")
-
-    print(gridw.root.next.opp.next)
+    gridw.draw("benchmarks/one_triangle_two_pass/polygon-grid.png")
 
     btree = BackwardReachabilityTree(gridw)
     btree.construct_tree(max_depth=8)
-    btree.print()
-    btree.draw(filename="src/benchmarks/one_triangle_two_pass/backward-graph.png")
+    # btree.print()
+    btree.draw(filename="benchmarks/one_triangle_two_pass/backward-graph.png")
+
+    polygon_grid_to_prism(
+        gridw, "benchmarks/one_triangle_two_pass/one_triangle_two_pass.prism", 100
+    )
+
+    return gridw, btree
