@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+from linpreds import Direction, DirectionSets
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
 
@@ -13,12 +15,30 @@ class ContinuousReachabilityGridGame:
 
         self.target_edges = set(gridw.target.edges_in_polygon())
 
-    def restart(self):
+    def restart(self) -> None:
         self.current_edge = self.start_edge
         self.current_coord = self.start_coord
 
-    def step(self, direction: HalfEdge):
+    def _validate_direction(self, direction: HalfEdge) -> None:
+        d = direction.end - direction.start
+        acts = (
+            DirectionSets[self.current_edge.actions]
+            if self.current_edge.actions
+            else ()
+        )
+        if d.y > 0:
+            assert Direction.U in acts
+        elif d.y < 0:
+            assert Direction.D in acts
+
+        if d.x > 0:
+            assert Direction.R in acts
+        elif d.x < 0:
+            assert Direction.L in acts
+
+    def step(self, direction: HalfEdge) -> Tuple[Vertex, Optional[HalfEdge], bool]:
         assert self.current_coord == direction.start
+        self._validate_direction(direction)
         intersection_vertex = self.current_edge.intersects_edge(direction)
         intersection_edge = self.current_edge.next
 
