@@ -24,6 +24,7 @@ class ContinuousReachabilityGridGame:
     def restart(self) -> None:
         self.current_edge = self.start_edge
         self.current_coord = self.start_coord
+        self.traversed_edges = []
 
     def _validate_direction(self, direction: HalfEdge) -> None:
         d = direction.end - direction.start

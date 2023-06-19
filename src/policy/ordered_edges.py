@@ -9,15 +9,13 @@ from src.backward_reachability import (
 )
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
+NavigationDirection = Enum("NavigationDirection", ["Up", "Down", "Neutral"])
+
 
 class EdgeActions:
-    NavigationDirection = Enum("NavigationDirection", ["Up", "Down", "Neutral"])
-
     def __init__(self, edge: HalfEdge) -> None:
         self.edge = edge
-        self.targets: List[
-            Tuple[VertexInterval, EdgeActions.NavigationDirection, HalfEdge]
-        ] = []
+        self.targets: List[Tuple[VertexInterval, NavigationDirection, HalfEdge]] = []
         self.current_target = 0
 
     def __str__(self) -> str:
@@ -28,20 +26,20 @@ class EdgeActions:
 
     def add_target(self, vi: VertexInterval, e: HalfEdge):
         if not self.targets:
-            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
+            self.targets.append((vi.copy(), NavigationDirection.Neutral, e))
             return
 
         last_target, last_direction, last_e = self.targets.pop()
         if not e.ends_eq(last_e):
             self.targets.append((last_target, last_direction, last_e))
-            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
+            self.targets.append((vi.copy(), NavigationDirection.Neutral, e))
             return
 
         if vi.start == last_target.end:
             self.targets.append(
                 (
                     VertexInterval(last_target.start, vi.end),
-                    self.NavigationDirection.Up,
+                    NavigationDirection.Up,
                     e,
                 )
             )
@@ -49,13 +47,13 @@ class EdgeActions:
             self.targets.append(
                 (
                     VertexInterval(vi.start, last_target.end),
-                    self.NavigationDirection.Down,
+                    NavigationDirection.Down,
                     e,
                 )
             )
         else:
             self.targets.append((last_target, last_direction, last_e))
-            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
+            self.targets.append((vi.copy(), NavigationDirection.Neutral, e))
 
     def restart(self) -> None:
         self.current_target = 0
@@ -89,7 +87,7 @@ class EdgeActions:
 
         if next_filter:
             self.current_target += 1
-            if next_dir == self.NavigationDirection.Neutral:
+            if next_dir == NavigationDirection.Neutral:
                 return (
                     HalfEdge(
                         coord,
@@ -99,9 +97,9 @@ class EdgeActions:
                     ),
                     next_e,
                 )
-            elif next_dir == self.NavigationDirection.Up:
+            elif next_dir == NavigationDirection.Up:
                 return HalfEdge(coord, next_filter[0].end), next_e
-            elif next_dir == self.NavigationDirection.Down:
+            elif next_dir == NavigationDirection.Down:
                 return HalfEdge(coord, next_filter[0].start), next_e
             else:
                 raise ValueError
@@ -115,7 +113,7 @@ class EdgeActions:
         if not filter:
             raise ValueError
 
-        if dir == self.NavigationDirection.Neutral:
+        if dir == NavigationDirection.Neutral:
             return (
                 HalfEdge(
                     coord,
@@ -123,9 +121,9 @@ class EdgeActions:
                 ),
                 e,
             )
-        elif dir == self.NavigationDirection.Up:
+        elif dir == NavigationDirection.Up:
             return HalfEdge(coord, filter[0].end), e
-        elif dir == self.NavigationDirection.Down:
+        elif dir == NavigationDirection.Down:
             return HalfEdge(coord, filter[0].start), e
         else:
             raise ValueError
