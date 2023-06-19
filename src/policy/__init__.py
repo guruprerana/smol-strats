@@ -1,3 +1,4 @@
+from typing import Tuple
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
 
@@ -8,7 +9,7 @@ class BasePolicy:
     def build(self) -> None:
         raise NotImplementedError
 
-    def navigate(self, coord: Vertex, edge: HalfEdge) -> HalfEdge:
+    def navigate(self, coord: Vertex, edge: HalfEdge) -> Tuple[HalfEdge, HalfEdge]:
         raise NotImplementedError
 
     def restart(self) -> None:

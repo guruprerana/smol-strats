@@ -1,4 +1,5 @@
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
+import drawsvg as dw
 from src.linpreds import Direction, DirectionSets
 from src.policy import BasePolicy
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
@@ -6,13 +7,17 @@ from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
 class ContinuousReachabilityGridGame:
     def __init__(
-        self, gridw: PolygonGridWorld, start_edge: HalfEdge, start_coord: Vertex
+        self,
+        gridw: PolygonGridWorld,
+        start_edge: HalfEdge,
+        start_coord: Vertex = Vertex(0, 0),
     ) -> None:
         self.gridw = gridw
         self.start_edge = start_edge
         self.current_edge = start_edge
         self.start_coord = start_coord
         self.current_coord = start_coord
+        self.traversed_edges: List[HalfEdge] = []
 
         self.target_edges = set(gridw.target.edges_in_polygon())
 
@@ -37,25 +42,18 @@ class ContinuousReachabilityGridGame:
         elif d.x < 0:
             assert Direction.L in acts
 
-    def step(self, direction: HalfEdge) -> Tuple[Vertex, Optional[HalfEdge], bool]:
+    def step(
+        self, direction: HalfEdge, target_e: HalfEdge
+    ) -> Tuple[Vertex, Optional[HalfEdge], bool]:
         assert self.current_coord == direction.start
         self._validate_direction(direction)
-        intersection_vertex = self.current_edge.intersects_edge(direction)
-        intersection_edge = self.current_edge.next
+        assert target_e in map(lambda x: x.opp, self.current_edge.edges_in_polygon())
+        assert target_e.contains_vertex(direction.end)
 
-        while not intersection_vertex and intersection_edge != self.current_edge:
-            intersection_vertex = intersection_edge.intersects_edge(direction)
-            intersection_edge = intersection_edge.next
+        self.current_coord = direction.end
+        self.current_edge = target_e
 
-        if not intersection_vertex:
-            raise ValueError
-
-        self.current_coord = intersection_vertex
-
-        if not intersection_edge.opp:
-            raise ValueError
-
-        self.current_edge = intersection_edge.opp
+        self.traversed_edges.append(HalfEdge(direction.start, direction.end))
 
         if self.current_edge in self.target_edges:
             return self.current_coord, self.current_edge, True
@@ -65,10 +63,49 @@ class ContinuousReachabilityGridGame:
     def run(self, policy: BasePolicy, max_iter=1000) -> bool:
         target_reached = self.current_edge in self.target_edges
         for _ in range(max_iter):
-            _, _, target_reached = self.step(
-                policy.navigate(self.current_coord, self.current_edge)
-            )
+            dir_e, target_e = policy.navigate(self.current_coord, self.current_edge)
+            _, _, target_reached = self.step(dir_e, target_e)
             if target_reached:
                 break
 
         return target_reached
+
+    def draw(
+        self,
+        filename="policy-path.png",
+        drawing: Optional[dw.Drawing] = None,
+        scale=30,
+        p=20,
+        save=True,
+    ) -> None:
+        grid_size = self.gridw.grid_size if self.gridw.grid_size is not None else 1000
+        d = (
+            drawing
+            if drawing is not None
+            else dw.Drawing(
+                (grid_size + 1) * scale + p,
+                (grid_size + 1) * scale + p,
+                id_prefix="grid",
+                context=dw.Context(invert_y=True),
+            )
+        )
+
+        self.gridw.draw(None, d, dir_line_width=0, save=False)
+
+        def draw_edge(e: HalfEdge, color="turquoise") -> None:
+            (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
+            d.append(
+                dw.Line(
+                    float(p + scale * x1),
+                    float(p + scale * y1),
+                    float(p + scale * x2),
+                    float(p + scale * y2),
+                    stroke_width=4,
+                    stroke=color,
+                )
+            )
+
+        list(map(lambda x: draw_edge(x), self.traversed_edges))
+
+        if save:
+            d.save_png(filename)

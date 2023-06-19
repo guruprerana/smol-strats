@@ -15,34 +15,53 @@ class EdgeActions:
 
     def __init__(self, edge: HalfEdge) -> None:
         self.edge = edge
-        self.targets: List[Tuple[VertexInterval, EdgeActions.NavigationDirection]] = []
+        self.targets: List[
+            Tuple[VertexInterval, EdgeActions.NavigationDirection, HalfEdge]
+        ] = []
         self.current_target = 0
 
-    def add_target(self, vi: VertexInterval):
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        return f"EdgeActions({self.edge}, {self.targets}, {self.current_target})"
+
+    def add_target(self, vi: VertexInterval, e: HalfEdge):
         if not self.targets:
-            self.targets.append((vi.copy(), self.NavigationDirection.Neutral))
+            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
             return
 
-        last_target, last_direction = self.targets.pop()
+        last_target, last_direction, last_e = self.targets.pop()
+        if not e.ends_eq(last_e):
+            self.targets.append((last_target, last_direction, last_e))
+            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
+            return
+
         if vi.start == last_target.end:
             self.targets.append(
-                (VertexInterval(last_target.start, vi.end), self.NavigationDirection.Up)
+                (
+                    VertexInterval(last_target.start, vi.end),
+                    self.NavigationDirection.Up,
+                    e,
+                )
             )
         elif vi.end == last_target.start:
             self.targets.append(
                 (
                     VertexInterval(vi.start, last_target.end),
                     self.NavigationDirection.Down,
+                    e,
                 )
             )
         else:
-            self.targets.append((last_target, last_direction))
-            self.targets.append((vi.copy(), self.NavigationDirection.Neutral))
+            self.targets.append((last_target, last_direction, last_e))
+            self.targets.append((vi.copy(), self.NavigationDirection.Neutral, e))
 
     def restart(self) -> None:
         self.current_target = 0
 
-    def navigate(self, coord: Vertex) -> HalfEdge:
+    def navigate(self, coord: Vertex) -> Tuple[HalfEdge, HalfEdge]:
+        assert self.edge.contains_vertex(coord)
         x_bounds = [coord.x, coord.x]
         y_bounds = [coord.y, coord.y]
 
@@ -59,10 +78,10 @@ class EdgeActions:
             else:
                 raise ValueError
 
-        next_target, next_dir = None, None
+        next_target, next_dir, next_e = None, None, None
         next_filter: List[VertexInterval] = []
         if self.current_target + 1 < len(self.targets):
-            next_target, next_dir = self.targets[self.current_target + 1]
+            next_target, next_dir, next_e = self.targets[self.current_target + 1]
 
             next_x_filter = next_target.intersect_x_bounds(x_bounds[0], x_bounds[1])
             for vi in next_x_filter:
@@ -71,18 +90,23 @@ class EdgeActions:
         if next_filter:
             self.current_target += 1
             if next_dir == self.NavigationDirection.Neutral:
-                return HalfEdge(
-                    coord,
-                    (next_filter[0].start + next_filter[0].end).mult_const(mpq(1, 2)),
+                return (
+                    HalfEdge(
+                        coord,
+                        (next_filter[0].start + next_filter[0].end).mult_const(
+                            mpq(1, 2)
+                        ),
+                    ),
+                    next_e,
                 )
             elif next_dir == self.NavigationDirection.Up:
-                return HalfEdge(coord, next_filter[0].end)
+                return HalfEdge(coord, next_filter[0].end), next_e
             elif next_dir == self.NavigationDirection.Down:
-                return HalfEdge(coord, next_filter[0].start)
+                return HalfEdge(coord, next_filter[0].start), next_e
             else:
                 raise ValueError
 
-        target, dir = self.targets[self.current_target]
+        target, dir, e = self.targets[self.current_target]
         x_filter = target.intersect_x_bounds(x_bounds[0], x_bounds[1])
         filter: List[VertexInterval] = []
         for vi in x_filter:
@@ -92,14 +116,17 @@ class EdgeActions:
             raise ValueError
 
         if dir == self.NavigationDirection.Neutral:
-            return HalfEdge(
-                coord,
-                (filter[0].start + filter[0].end).mult_const(mpq(1, 2)),
+            return (
+                HalfEdge(
+                    coord,
+                    (filter[0].start + filter[0].end).mult_const(mpq(1, 2)),
+                ),
+                e,
             )
         elif dir == self.NavigationDirection.Up:
-            return HalfEdge(coord, filter[0].end)
+            return HalfEdge(coord, filter[0].end), e
         elif dir == self.NavigationDirection.Down:
-            return HalfEdge(coord, filter[0].start)
+            return HalfEdge(coord, filter[0].start), e
         else:
             raise ValueError
 
@@ -110,22 +137,25 @@ class OrderedEdgePolicy:
         self.built = False
         self.edge_actions: Dict[HalfEdge, EdgeActions] = dict()
 
-    def build(self) -> None:
+    def build(self, btree_depth=100) -> None:
         self.btree = BackwardReachabilityTree(self.gridw)
-        self.btree.construct_tree(max_depth=100)
+        self.btree.construct_tree(max_depth=btree_depth)
         self.start_leaf = self.btree.least_depth_begin_leaf()
         assert self.start_leaf is not None
 
         curr = self.start_leaf
-        while curr.forward_node and not curr.forward_node.contains_target:
+        while curr.forward_node and not curr.contains_target:
             if not curr.linked_edge in self.edge_actions:
                 self.edge_actions[curr.linked_edge] = EdgeActions(curr.linked_edge)
 
-            self.edge_actions[curr.linked_edge].add_target(curr.forward_node.edge)
+            self.edge_actions[curr.linked_edge].add_target(
+                curr.forward_node.edge, curr.forward_node.linked_edge
+            )
+            curr = curr.forward_node
 
         self.built = True
 
-    def navigate(self, coord: Vertex, edge: HalfEdge) -> HalfEdge:
+    def navigate(self, coord: Vertex, edge: HalfEdge) -> Tuple[HalfEdge, HalfEdge]:
         assert self.built
         assert edge in self.edge_actions
         return self.edge_actions[edge].navigate(coord)

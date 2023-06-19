@@ -74,7 +74,7 @@ class HalfEdge:
         opp: Optional[HalfEdge] = None,
         actions: Optional[int] = None,
     ) -> None:
-        assert start != end
+        # assert start != end
         self.start = start
         self.end = end
         self.next = next
@@ -84,6 +84,9 @@ class HalfEdge:
 
     def __hash__(self) -> int:
         return hash((self.start, self.end))
+
+    def ends_eq(self, o: HalfEdge) -> bool:
+        return self.start == o.start and self.end == o.end
 
     def __repr__(self) -> str:
         return f"HalfEdge({str(self.start)}, {str(self.end)})"
@@ -310,6 +313,13 @@ class HalfEdge:
         assert 0 <= actions < 1 << 4
         for edge in self.edges_in_polygon():
             edge.actions = actions
+
+    def contains_vertex(self, v: Vertex) -> bool:
+        if self.end == self.start:
+            return self.start == v
+        return det(v - self.start, self.end - self.start) == 0 and 0 <= dot(
+            v - self.start, self.end - self.start
+        ) <= dot(self.end - self.start, self.end - self.start)
 
 
 class PolygonGridWorld:

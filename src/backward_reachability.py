@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import defaultdict
 import math
 from typing import Dict, Iterable, List, Optional
-from . import BasePolicy
+from src.policy import BasePolicy
 from src.linpreds import Direction, DirectionSets
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex, det, dot
 from gmpy2 import mpq
@@ -210,6 +210,8 @@ class VertexInterval:
         Returns:
             bool: true if v belongs to the vertex interval
         """
+        if self.end == self.start:
+            return self.start == v
         return det(v - self.start, self.end - self.start) == 0 and 0 <= dot(
             v - self.start, self.end - self.start
         ) <= dot(self.end - self.start, self.end - self.start)
@@ -280,7 +282,7 @@ class BackwardReachabilityTree(BasePolicy):
         self.leaves = self.roots
 
     def least_depth_begin_leaf(self) -> Optional[BackwardReachabilityTreeNode]:
-        begin_leaves = filter(lambda x: x.contains_begin, self.leaves)
+        begin_leaves = list(filter(lambda x: x.contains_begin, self.leaves))
         return min(begin_leaves, key=lambda x: x.depth, default=None)
 
     def grow(self) -> bool:

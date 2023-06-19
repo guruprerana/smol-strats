@@ -1,3 +1,5 @@
+from src.game.continuous import ContinuousReachabilityGridGame
+from src.policy.ordered_edges import OrderedEdgePolicy
 from src.polygons.prism import polygon_grid_to_prism
 from src.backward_reachability import BackwardReachabilityTree
 from src.linpreds import Direction, actions_from_directions
@@ -57,10 +59,18 @@ def main():
 
     gridw.draw("benchmarks/spiral/polygon-grid.png")
 
-    btree = BackwardReachabilityTree(gridw)
-    btree.construct_tree(max_depth=100)
-    # btree.print()
+    policy = OrderedEdgePolicy(gridw)
+    policy.build(btree_depth=1000)
+
+    game = ContinuousReachabilityGridGame(
+        gridw, policy.start_leaf.linked_edge, Vertex(0, 0)
+    )
+    success = game.run(policy)
+    print(f"{success}-ly won the game")
+
+    btree = policy.btree
     btree.draw(filename="benchmarks/spiral/backward-graph.png")
+    game.draw(filename="benchmarks/spiral/ordered-edges-policy-path.png")
 
     polygon_grid_to_prism(gridw, "benchmarks/spiral/spiral.prism", 100)
 
