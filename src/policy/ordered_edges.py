@@ -64,9 +64,9 @@ class EdgeActions:
         if self.current_target + 1 < len(self.targets):
             next_target, next_dir = self.targets[self.current_target + 1]
 
-            next_x_filter = next_target.intersect_x_bounds(*x_bounds)
+            next_x_filter = next_target.intersect_x_bounds(x_bounds[0], x_bounds[1])
             for vi in next_x_filter:
-                next_filter.extend(vi.intersect_y_bounds(*y_bounds))
+                next_filter.extend(vi.intersect_y_bounds(y_bounds[0], y_bounds[1]))
 
         if next_filter:
             self.current_target += 1
@@ -83,10 +83,10 @@ class EdgeActions:
                 raise ValueError
 
         target, dir = self.targets[self.current_target]
-        x_filter = target.intersect_x_bounds(*x_bounds)
+        x_filter = target.intersect_x_bounds(x_bounds[0], x_bounds[1])
         filter: List[VertexInterval] = []
         for vi in x_filter:
-            filter.extend(vi.intersect_y_bounds(*y_bounds))
+            filter.extend(vi.intersect_y_bounds(y_bounds[0], y_bounds[1]))
 
         if not filter:
             raise ValueError
@@ -105,18 +105,17 @@ class EdgeActions:
 
 
 class OrderedEdgePolicy:
-    def __init__(
-        self,
-        gridw: PolygonGridWorld,
-        btree: BackwardReachabilityTree,
-        start_leaf: BackwardReachabilityTreeNode,
-    ) -> None:
+    def __init__(self, gridw: PolygonGridWorld) -> None:
         self.gridw = gridw
-        self.btree = btree
-        self.start_leaf = start_leaf
+        self.built = False
         self.edge_actions: Dict[HalfEdge, EdgeActions] = dict()
 
     def build(self) -> None:
+        self.btree = BackwardReachabilityTree(self.gridw)
+        self.btree.construct_tree(max_depth=100)
+        self.start_leaf = self.btree.least_depth_begin_leaf()
+        assert self.start_leaf is not None
+
         curr = self.start_leaf
         while curr.forward_node and not curr.forward_node.contains_target:
             if not curr.linked_edge in self.edge_actions:
@@ -124,6 +123,14 @@ class OrderedEdgePolicy:
 
             self.edge_actions[curr.linked_edge].add_target(curr.forward_node.edge)
 
+        self.built = True
+
     def navigate(self, coord: Vertex, edge: HalfEdge) -> HalfEdge:
+        assert self.built
         assert edge in self.edge_actions
         return self.edge_actions[edge].navigate(coord)
+
+    def restart(self) -> None:
+        assert self.built
+        for _, ea in self.edge_actions.items():
+            ea.restart()

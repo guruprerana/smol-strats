@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
-from linpreds import Direction, DirectionSets
+from src.linpreds import Direction, DirectionSets
+from src.policy import BasePolicy
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
 
@@ -51,11 +52,23 @@ class ContinuousReachabilityGridGame:
 
         self.current_coord = intersection_vertex
 
-        if intersection_edge in self.target_edges:
-            return self.current_coord, None, True
-
         if not intersection_edge.opp:
             raise ValueError
 
         self.current_edge = intersection_edge.opp
+
+        if self.current_edge in self.target_edges:
+            return self.current_coord, self.current_edge, True
+
         return self.current_coord, self.current_edge, False
+
+    def run(self, policy: BasePolicy, max_iter=1000) -> bool:
+        target_reached = self.current_edge in self.target_edges
+        for _ in range(max_iter):
+            _, _, target_reached = self.step(
+                policy.navigate(self.current_coord, self.current_edge)
+            )
+            if target_reached:
+                break
+
+        return target_reached

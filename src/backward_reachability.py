@@ -2,6 +2,7 @@ from __future__ import annotations
 from collections import defaultdict
 import math
 from typing import Dict, Iterable, List, Optional
+from . import BasePolicy
 from src.linpreds import Direction, DirectionSets
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex, det, dot
 from gmpy2 import mpq
@@ -219,6 +220,7 @@ class BackwardReachabilityTreeNode:
         self,
         edge: VertexInterval,
         linked_edge: HalfEdge,
+        depth: int,
         forward_node: Optional[BackwardReachabilityTreeNode] = None,
         backward_nodes: Optional[List[BackwardReachabilityTreeNode]] = None,
         contains_target: bool = False,
@@ -226,6 +228,7 @@ class BackwardReachabilityTreeNode:
     ) -> None:
         self.edge = edge
         self.linked_edge = linked_edge
+        self.depth = depth
         self.backward_nodes = backward_nodes if backward_nodes else list()
         self.forward_node = forward_node
         self.contains_target = contains_target
@@ -247,7 +250,7 @@ class BackwardReachabilityTreeNode:
         return res
 
 
-class BackwardReachabilityTree:
+class BackwardReachabilityTree(BasePolicy):
     def __init__(self, polygrid: PolygonGridWorld) -> None:
         self.polygrid = polygrid
 
@@ -264,6 +267,7 @@ class BackwardReachabilityTree:
             node = BackwardReachabilityTreeNode(
                 vi_target_edge,
                 target_edge,
+                0,
                 contains_target=True,
             )
             self.edges_to_nodes[vi_target_edge] = [node]
@@ -274,6 +278,10 @@ class BackwardReachabilityTree:
             for edge in polygrid.target.edges_in_polygon()
         ]
         self.leaves = self.roots
+
+    def least_depth_begin_leaf(self) -> Optional[BackwardReachabilityTreeNode]:
+        begin_leaves = filter(lambda x: x.contains_begin, self.leaves)
+        return min(begin_leaves, key=lambda x: x.depth, default=None)
 
     def grow(self) -> bool:
         """Grows the backward reachability tree by extending the leaves
@@ -332,7 +340,9 @@ class BackwardReachabilityTree:
                     )
 
                     for new_vi in unexplored_filter:
-                        new_node = BackwardReachabilityTreeNode(new_vi, next_edge, leaf)
+                        new_node = BackwardReachabilityTreeNode(
+                            new_vi, next_edge, leaf.depth + 1, leaf
+                        )
                         added_nodes = True
                         leaf.add_backward_node(new_node)
                         new_leaves.append(new_node)
