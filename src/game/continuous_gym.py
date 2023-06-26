@@ -39,16 +39,20 @@ class ContinuousReachabilityGridGame(gym.Env):
         self.target_coord = gridw.target.middle_of_polygon()
 
         # observation space is just the coordinates of the agent
-        self.observation_space = spaces.Box(low=0, high=self.grid_size, shape=(2,))
+        self.observation_space = spaces.Box(
+            low=0, high=self.grid_size, shape=(2,), dtype=np.float32
+        )
 
         # action space is the set of directions agent can move around
-        self.action_space = spaces.Box(low=0, high=1, shape=(1,))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(1,))
 
     def _get_obs(self):
-        return np.array([self.current_coord.x, self.current_coord.y])
+        return np.array(
+            [np.float32(self.current_coord.x), np.float32(self.current_coord.y)]
+        )
 
     def _get_info(self):
-        return None
+        return dict()
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         super().reset(seed=seed, options=options)
