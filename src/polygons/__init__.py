@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Callable, Generator, List, Optional, Set, Union
 from gmpy2 import mpq
+import numpy as np
 import drawsvg as dw
 
 from src.linpreds import Direction, DirectionSets, LinearPredicatesGridWorld
@@ -12,19 +13,22 @@ class Vertex:
         self.y = mpq(y)
 
     def __add__(self, v: Vertex) -> Vertex:
-        return Vertex(self.x + v.x, self.y + v.y)
+        return self.__class__(self.x + v.x, self.y + v.y)
 
     def __neg__(self) -> Vertex:
-        return Vertex(-self.x, -self.y)
+        return self.__class__(-self.x, -self.y)
 
     def __sub__(self, v: Vertex) -> Vertex:
-        return Vertex(self.x - v.x, self.y - v.y)
+        return self.__class__(self.x - v.x, self.y - v.y)
 
     def mult_const(self, t: mpq) -> Vertex:
-        return Vertex(self.x * t, self.y * t)
+        return self.__class__(self.x * t, self.y * t)
+
+    def norm(self) -> float:
+        return np.linalg.norm((float(self.x), float(self.y)))
 
     def __eq__(self, v: object) -> bool:
-        if not isinstance(v, self.__class__):
+        if not isinstance(v, Vertex):
             return False
         return self.x == v.x and self.y == v.y
 
@@ -36,6 +40,12 @@ class Vertex:
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
+
+
+class VertexFloat(Vertex):
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
 
 
 def det(v1: Vertex, v2: Vertex) -> mpq:
@@ -98,6 +108,16 @@ class HalfEdge:
             yield edge
             edge = edge.next
 
+    def middle_of_polygon(self) -> Vertex:
+        v = self.start
+        ne = self.next
+        n = 1
+        while ne != self:
+            v += ne.start
+            n += 1
+            ne = ne.next
+        return v.mult_const(mpq(1, n) if isinstance(v.x, mpq) else 1.0 / n)
+
     def navigate(self, path: str) -> HalfEdge:
         pt = self
         for p in path:
@@ -117,7 +137,9 @@ class HalfEdge:
                 raise ValueError
         return pt
 
-    def intersects_edge(self, e: HalfEdge) -> Optional[Vertex]:
+    def intersects_edge(
+        self, e: HalfEdge, consider_colinear=False, current_coord=None
+    ) -> Optional[Vertex]:
         """Determines whether edge intersects another edge e
 
         Args:
@@ -126,10 +148,11 @@ class HalfEdge:
         Returns:
             Optional[Vertex]: returns the vertex of intersection if it exists else None
         """
-        if self.start in (e.start, e.end):
-            return self.start
-        elif self.end in (e.start, e.end):
-            return self.end
+        if not consider_colinear:
+            if self.start in (e.start, e.end):
+                return self.start
+            elif self.end in (e.start, e.end):
+                return self.end
 
         # https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
         p, r, q, s = self.start, self.end - self.start, e.start, e.end - e.start
@@ -138,7 +161,20 @@ class HalfEdge:
 
         if detrs == 0:
             # colinear or parallel
-            # technically it can intersect a portion of the line but we do not consider this case
+            # technically it can intersect a portion of the line but we do not (completely) consider this case
+            if consider_colinear:
+                contains_end = self.contains_vertex(e.end)
+                contains_start = self.contains_vertex(e.start)
+
+                if contains_end and contains_start:
+                    if current_coord == e.start:
+                        return e.end
+                    elif current_coord == e.end:
+                        return e.start
+                elif contains_end:
+                    return e.end
+                elif contains_start:
+                    return e.start
             return None
 
         t = det(q - p, s) / detrs
