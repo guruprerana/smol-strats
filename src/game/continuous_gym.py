@@ -118,7 +118,7 @@ class ContinuousReachabilityGridGame(gym.Env):
         return VertexFloat(x, y)
 
     def _dir_from_action(self, a: float) -> VertexFloat:
-        return VertexFloat(np.cos(2 * np.pi * a), np.sin(2 * np.pi * a)).mult_const(
+        return VertexFloat(np.cos(np.pi * a), np.sin(np.pi * a)).mult_const(
             2 * self.grid_size
         )
 
@@ -136,7 +136,9 @@ class ContinuousReachabilityGridGame(gym.Env):
         )
         intersection_edge = edge
 
-        while not intersection_vertex and intersection_edge.next != edge:
+        while (
+            not intersection_vertex or intersection_vertex == self.current_coord
+        ) and intersection_edge.next != edge:
             intersection_edge = intersection_edge.next
             intersection_vertex = dir_edge.intersects_edge(
                 intersection_edge,

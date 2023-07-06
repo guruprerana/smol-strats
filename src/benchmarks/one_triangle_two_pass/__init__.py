@@ -18,7 +18,7 @@ gridw.root.next.next.add_diagonal(Vertex(25, 0))
 
 gridw.root.assign_action_polygon(actions_from_directions((Direction.R,)))
 gridw.root.next.opp.assign_action_polygon(
-    actions_from_directions((Direction.L, Direction.R, Direction.U, Direction.D))
+    actions_from_directions((Direction.L, Direction.R))
 )
 gridw.root.next.opp.next.opp.assign_action_polygon(
     actions_from_directions((Direction.U, Direction.L))
@@ -49,12 +49,12 @@ def main():
         gridw, "benchmarks/one_triangle_two_pass/one_triangle_two_pass.prism", 100
     )
 
-    game = GymGame(gridw, gridw.root)
-    game.reset()
-    game.step([0])
-    game.step([0.49])
-    _, _, terminated, _, _ = game.step([1])
-    if terminated:
-        print(f"Gym game won")
+    # game = GymGame(gridw, gridw.root)
+    # game.reset()
+    # game.step([0])
+    # game.step([0.49])
+    # _, _, terminated, _, _ = game.step([1])
+    # if terminated:
+    #     print(f"Gym game won")
 
     return gridw, btree

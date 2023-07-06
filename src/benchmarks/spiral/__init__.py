@@ -1,4 +1,5 @@
 from src.game.continuous import ContinuousReachabilityGridGame
+from src.game.continuous_gym import ContinuousReachabilityGridGame as GymGame
 from src.policy.ordered_edges import OrderedEdgePolicy
 from src.polygons.prism import polygon_grid_to_prism
 from src.backward_reachability import BackwardReachabilityTree
@@ -18,32 +19,44 @@ gridw.root.navigate("nn").add_vertex(Vertex(10, 10)).add_vertex(
 gridw.root = gridw.root.add_vertex(Vertex(24, 0)).add_vertex(Vertex(23, 0))
 
 gridw.root.navigate("pbbp").add_diagonal(Vertex(10, 11))
-gridw.root.navigate("pbb").assign_action_polygon(actions_from_directions([Direction.D]))
+gridw.root.navigate("pbb").assign_action_polygon(
+    actions_from_directions([Direction.D, Direction.L])
+)
 gridw.root.navigate("pbbbp").add_diagonal(Vertex(17, 11))
 gridw.root.navigate("pbbb").assign_action_polygon(
-    actions_from_directions([Direction.L])
+    actions_from_directions([Direction.L, Direction.U])
 )
 gridw.root.navigate("pbbbb").assign_action_polygon(
-    actions_from_directions([Direction.U])
+    actions_from_directions([Direction.U, Direction.R])
 )
 gridw.root.navigate("ppo").add_diagonal(Vertex(10, 11))
-gridw.root.navigate("ppo").assign_action_polygon(actions_from_directions([Direction.D]))
+gridw.root.navigate("ppo").assign_action_polygon(
+    actions_from_directions([Direction.D, Direction.L])
+)
 gridw.root.prev.add_diagonal(Vertex(10, 10))
-gridw.root.prev.opp.assign_action_polygon(actions_from_directions([Direction.D]))
+gridw.root.prev.opp.assign_action_polygon(
+    actions_from_directions([Direction.D, Direction.L])
+)
 gridw.root.navigate("bpbppop").add_diagonal(Vertex(14, 11))
 gridw.root.navigate("bpbo").add_diagonal(Vertex(13, 11))
 gridw.target = gridw.root.navigate("pppo")
 gridw.root.navigate("ppppo").add_diagonal(Vertex(17, 11))
 gridw.root.navigate("ppppof").assign_action_polygon(
-    actions_from_directions([Direction.U])
+    actions_from_directions([Direction.U, Direction.R])
 )
 gridw.root.navigate("nn").add_diagonal(Vertex(17, 10))
-gridw.root.navigate("nnf").assign_action_polygon(actions_from_directions([Direction.U]))
+gridw.root.navigate("nnf").assign_action_polygon(
+    actions_from_directions([Direction.U, Direction.R])
+)
 gridw.root.navigate("n").add_diagonal(Vertex(14, 10))
-gridw.root.navigate("nf").assign_action_polygon(actions_from_directions([Direction.R]))
+gridw.root.navigate("nf").assign_action_polygon(
+    actions_from_directions([Direction.R, Direction.D])
+)
 gridw.root.add_diagonal(Vertex(13, 10))
-gridw.root.navigate("f").assign_action_polygon(actions_from_directions([Direction.U]))
-gridw.root.assign_action_polygon(actions_from_directions([Direction.R]))
+gridw.root.navigate("f").assign_action_polygon(
+    actions_from_directions([Direction.U, Direction.R])
+)
+gridw.root.assign_action_polygon(actions_from_directions([Direction.R, Direction.D]))
 
 
 def main():
@@ -63,5 +76,16 @@ def main():
     game.draw(filename="benchmarks/spiral/ordered-edges-policy-path.png")
 
     polygon_grid_to_prism(gridw, "benchmarks/spiral/spiral.prism", 100)
+
+    # gym = GymGame(gridw, gridw.root)
+    # gym.reset()
+    # print(gym.step([0]))
+    # print(gym.step([0.5]))
+    # print(gym.step([0]))
+    # print(gym.step([0.5]))
+    # print(gym.step([0.5]))
+    # print(gym.step([0.5]))
+    # print(gym.step([1]))
+    # gym.draw("clay.png")
 
     return gridw, btree
