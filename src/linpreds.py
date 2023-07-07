@@ -15,6 +15,10 @@ def _scale_point(p: Point, factor: int) -> Point:
     return (factor * p[0], factor * p[1])
 
 
+def point_eq(p1: Point, p2: Point):
+    return p1[0] == p2[0] and p1[1] == p2[1]
+
+
 class LinearPredicate:
     """
     Represents a linear predicate as a line joining two points on the boundary of a square grid
@@ -33,6 +37,20 @@ class LinearPredicate:
         self.predicate_grid_size = predicate_grid_size
 
         self._scale_cache: Dict[int, Tuple[Point, Point]] = {}
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, LinearPredicate):
+            return False
+        return self.predicate_grid_size == __value.predicate_grid_size and (
+            (point_eq(self.p1, __value.p1) and point_eq(self.p2, __value.p2))
+            or (point_eq(self.p1, __value.p2) and point_eq(self.p2, __value.p1))
+        )
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    def __str__(self) -> str:
+        return f"LinearPredicate({self.p1}, {self.p2})"
 
     def determine_side(self, p: Point, grid_size: Optional[int]) -> bool:
         scaled_p1, scaled_p2 = self._scale_points(grid_size)
@@ -149,7 +167,12 @@ def actions_from_directions(dirs: Iterable[Direction]):
 
 
 class LinearPredicatesGridWorld:
-    def __init__(self, preds: List[LinearPredicate], actions: List[int]) -> None:
+    def __init__(
+        self,
+        preds: List[LinearPredicate],
+        actions: List[int],
+        target_pt: Point = (0, 0),
+    ) -> None:
         assert len(preds) > 0
         assert all(
             preds[i].predicate_grid_size == preds[0].predicate_grid_size
@@ -157,10 +180,12 @@ class LinearPredicatesGridWorld:
         )
         assert len(actions) == 1 << len(preds)
         assert all(0 <= action < 1 << 4 for action in actions)
+        assert all(0 <= coord <= preds[0].predicate_grid_size for coord in target_pt)
 
         self.preds = preds
         self.predicate_grid_size = preds[0].predicate_grid_size
         self.actions = actions
+        self.target_pt = target_pt
         self._n_preds = len(preds)
 
     def _region_prism_predicate(self, region: int, grid_size: int) -> str:
@@ -206,8 +231,8 @@ class LinearPredicatesGridWorld:
                     "mdp\n",
                     "\n",
                     "module grid\n",
-                    f"\tx : [0..{grid_size}] init 0;\n",
-                    f"\ty : [0..{grid_size}] init 0;\n",
+                    f"\tx : [0..{grid_size}] init {self.target_pt[0]};\n",
+                    f"\ty : [0..{grid_size}] init {self.target_pt[1]};\n",
                     "\n",
                 )
             )
@@ -219,8 +244,7 @@ class LinearPredicatesGridWorld:
 
                 f.writelines(action_strings)
 
-            target_pt = grid_size, grid_size
-            target_region = self._region_of_point(target_pt, grid_size)
+            target_region = self._region_of_point(self.target_pt, grid_size)
             region_pred = self._region_prism_predicate(target_region, grid_size)
 
             f.writelines("endmodule\n\n")
@@ -322,7 +346,36 @@ class LinearPredicatesGridWorldSampler:
             predicate_grid_size=self.predicate_grid_size
         )
 
-        preds = [pred_sampler.sample() for _ in range(n_preds)]
+        boundary_preds = [
+            LinearPredicate((0, 0), (self.predicate_grid_size, 0)),
+            LinearPredicate(
+                (self.predicate_grid_size, 0),
+                (self.predicate_grid_size, self.predicate_grid_size),
+            ),
+            LinearPredicate(
+                (self.predicate_grid_size, self.predicate_grid_size),
+                (0, self.predicate_grid_size),
+            ),
+            LinearPredicate((0, self.predicate_grid_size), (0, 0)),
+        ]
+
+        preds = []
+        i_preds = 0
+
+        iter = 0
+        MAX_ITER = 10000
+        # we dont want duplicate predicates
+        while i_preds < n_preds and iter < MAX_ITER:
+            pred = pred_sampler.sample()
+            if pred not in boundary_preds and pred not in preds:
+                preds.append(pred)
+                i_preds += 1
+            iter += 1
+
         actions = [random.randrange(0, 1 << 4) for _ in range(1 << n_preds)]
 
-        return LinearPredicatesGridWorld(preds, actions)
+        target_pt = random.randint(0, self.predicate_grid_size), random.randint(
+            0, self.predicate_grid_size
+        )
+
+        return LinearPredicatesGridWorld(preds, actions, target_pt)

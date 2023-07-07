@@ -78,6 +78,7 @@ class ContinuousReachabilityGridGame:
         scale=30,
         p=20,
         save=True,
+        start_point: Vertex = None,
     ) -> None:
         grid_size = self.gridw.grid_size if self.gridw.grid_size is not None else 1000
         d = (
@@ -91,7 +92,7 @@ class ContinuousReachabilityGridGame:
             )
         )
 
-        self.gridw.draw(None, d, dir_line_width=0, save=False)
+        self.gridw.draw(None, d, dir_line_width=0, save=False, start_point=start_point)
 
         def draw_edge(e: HalfEdge, color="turquoise") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)

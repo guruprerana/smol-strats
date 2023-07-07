@@ -240,7 +240,7 @@ class BackwardReachabilityTreeNode:
         forward_node: Optional[BackwardReachabilityTreeNode] = None,
         backward_nodes: Optional[List[BackwardReachabilityTreeNode]] = None,
         contains_target: bool = False,
-        contains_begin: bool = False,
+        contains_begin: bool = None,
     ) -> None:
         self.edge = edge
         self.linked_edge = linked_edge
@@ -249,7 +249,9 @@ class BackwardReachabilityTreeNode:
         self.forward_node = forward_node
         self.contains_target = contains_target
         self.contains_begin = (
-            contains_begin if contains_begin else edge.contains_vertex(Vertex(0, 0))
+            contains_begin
+            if contains_begin is not None
+            else edge.contains_vertex(Vertex(0, 0))
         )
 
     def add_backward_node(self, node: BackwardReachabilityTreeNode) -> None:
@@ -267,8 +269,9 @@ class BackwardReachabilityTreeNode:
 
 
 class BackwardReachabilityTree(BasePolicy):
-    def __init__(self, polygrid: PolygonGridWorld) -> None:
+    def __init__(self, polygrid: PolygonGridWorld, begin_point: Vertex = None) -> None:
         self.polygrid = polygrid
+        self.begin_point = begin_point
 
         assert polygrid.target is not None
 
@@ -298,6 +301,9 @@ class BackwardReachabilityTree(BasePolicy):
     def least_depth_begin_leaf(self) -> Optional[BackwardReachabilityTreeNode]:
         begin_leaves = list(filter(lambda x: x.contains_begin, self.leaves))
         return min(begin_leaves, key=lambda x: x.depth, default=None)
+
+    def max_depth_leaf(self) -> BackwardReachabilityTreeNode:
+        return max(self.leaves, key=lambda leaf: leaf.depth)
 
     def grow(self) -> bool:
         """Grows the backward reachability tree by extending the leaves
@@ -356,8 +362,17 @@ class BackwardReachabilityTree(BasePolicy):
                     )
 
                     for new_vi in unexplored_filter:
+                        contains_begin = (
+                            new_vi.contains_vertex(self.begin_point)
+                            if self.begin_point is not None
+                            else False
+                        )
                         new_node = BackwardReachabilityTreeNode(
-                            new_vi, next_edge, leaf.depth + 1, leaf
+                            new_vi,
+                            next_edge,
+                            leaf.depth + 1,
+                            leaf,
+                            contains_begin=contains_begin,
                         )
                         added_nodes = True
                         leaf.add_backward_node(new_node)
@@ -379,6 +394,7 @@ class BackwardReachabilityTree(BasePolicy):
         scale=30,
         p=20,
         save=True,
+        start_point: Vertex = None,
     ) -> None:
         grid_size = (
             self.polygrid.grid_size if self.polygrid.grid_size is not None else 1000
@@ -394,7 +410,9 @@ class BackwardReachabilityTree(BasePolicy):
             )
         )
 
-        self.polygrid.draw(None, d, dir_line_width=0, save=False)
+        self.polygrid.draw(
+            None, d, dir_line_width=0, save=False, start_point=start_point
+        )
 
         def draw_edge(e: VertexInterval, color="white") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)

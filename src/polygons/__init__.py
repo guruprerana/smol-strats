@@ -52,11 +52,12 @@ class VertexSerializer:
     SerializedType = Tuple[str, str]
 
     def serialize(v: Vertex) -> SerializedType:
-        return to_binary(v.x).decode("utf-8"), to_binary(v.y).decode("utf-8")
+        return to_binary(v.x).decode("iso-8859-1"), to_binary(v.y).decode("iso-8859-1")
 
     def deserialize(ser: SerializedType) -> Vertex:
         return Vertex(
-            from_binary(ser[0].encode("utf-8")), from_binary(ser[1].encode("utf-8"))
+            from_binary(ser[0].encode("iso-8859-1")),
+            from_binary(ser[1].encode("iso-8859-1")),
         )
 
 
@@ -468,7 +469,10 @@ class PolygonGridWorld:
         p=20,
         dir_line_width=30,
         save=True,
+        start_point: Vertex = None,
     ) -> None:
+        if not start_point:
+            start_point = Vertex(0, 0)
         grid_size = self.grid_size if self.grid_size is not None else 1000
         d = (
             drawing
@@ -576,6 +580,11 @@ class PolygonGridWorld:
         self.traverse_polygons(draw_directions)
         for e in self.target.edges_in_polygon():
             draw_edge(e, "orange")
+
+        start_x, start_y = start_point.x, start_point.y
+        x_fig, y_fig = float(p + (start_x * scale)), float(p + (start_y * scale))
+        d.append(dw.Circle(x_fig, y_fig, 5, stroke="blue", fill="blue"))
+
         if save:
             d.save_png(filename)
 
@@ -709,7 +718,7 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
     root = outer_edges[0]
     grid_world = PolygonGridWorld(root, grid_size=size)
 
-    target_region = lingrid._region_of_point((size, size), None)
+    target_region = lingrid._region_of_point(lingrid.target_pt, None)
     target_edges: List[HalfEdge] = []
 
     def assign_actions(e: HalfEdge) -> None:

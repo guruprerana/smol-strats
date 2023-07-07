@@ -1,7 +1,7 @@
 from typing import List
 
 from src.linpreds import Direction, DirectionSets
-from src.polygons import HalfEdge, PolygonGridWorld, det
+from src.polygons import HalfEdge, PolygonGridWorld, Vertex, det
 
 
 def halfedge_to_prism(edge: HalfEdge, grid_factor=100) -> str:
@@ -40,16 +40,18 @@ def polygon_to_prism_with_actions(edge: HalfEdge, grid_factor=100) -> List[str]:
 
 
 def polygon_grid_to_prism(
-    gridw: PolygonGridWorld, filename: str, grid_factor=100
+    gridw: PolygonGridWorld, filename: str, grid_factor=100, start_pt: Vertex = None
 ) -> None:
+    if not start_pt:
+        start_pt = Vertex(0, 0)
     with open(filename, "w") as f:
         f.writelines(
             (
                 "mdp\n",
                 "\n",
                 "module grid\n",
-                f"\tx : [0..{grid_factor*gridw.grid_size}] init 0;\n",
-                f"\ty : [0..{grid_factor*gridw.grid_size}] init 0;\n",
+                f"\tx : [0..{grid_factor*gridw.grid_size}] init {start_pt.x};\n",
+                f"\ty : [0..{grid_factor*gridw.grid_size}] init {start_pt.y};\n",
                 "\n",
             )
         )

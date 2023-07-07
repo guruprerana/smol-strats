@@ -192,17 +192,32 @@ class OrderedEdgePolicy:
         gridw: PolygonGridWorld,
         ea: Optional[Dict[HalfEdge, EdgeActions]] = None,
         start_edge: Optional[HalfEdge] = None,
+        start_point: Optional[Vertex] = None,
+        btree: Optional[BackwardReachabilityTree] = None,
+        start_leaf: Optional[BackwardReachabilityTreeNode] = None,
     ) -> None:
         self.gridw = gridw
         self.built = True if ea else False
         self.edge_actions: Dict[HalfEdge, EdgeActions] = ea if ea else dict()
         self.start_edge: HalfEdge = start_edge or None
 
-    def build(self, btree_depth=100) -> None:
-        self.btree = BackwardReachabilityTree(self.gridw)
-        self.btree.construct_tree(max_depth=btree_depth)
-        self.start_leaf = self.btree.least_depth_begin_leaf()
-        self.start_edge = self.start_leaf.linked_edge
+        if btree:
+            assert btree.polygrid == gridw
+        self.start_point = start_point if start_point else Vertex(0, 0)
+        self.btree = btree
+
+        if start_leaf:
+            assert start_leaf in btree.leaves
+        self.start_leaf = start_leaf
+
+    def build(self, btree_depth=1000) -> None:
+        if not self.btree:
+            self.btree = BackwardReachabilityTree(self.gridw, self.start_point)
+            self.btree.construct_tree(max_depth=btree_depth)
+
+        if not self.start_leaf:
+            self.start_leaf = self.btree.least_depth_begin_leaf()
+            self.start_edge = self.start_leaf.linked_edge
         assert self.start_leaf is not None
 
         curr = self.start_leaf
