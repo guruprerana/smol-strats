@@ -1,6 +1,7 @@
+import json
 import pickle
 from src.game.continuous import ContinuousReachabilityGridGame
-from src.policy.ordered_edges import OrderedEdgePolicy
+from src.policy.ordered_edges import OrderedEdgePolicy, OrderedEdgePolicySerializer
 from src.backward_reachability import BackwardReachabilityTree
 from src.polygons import *
 from src.linpreds import *
@@ -41,3 +42,6 @@ with open("benchmarks/generated/pickles/policy.pickle", "wb") as f:
 
 with open("benchmarks/generated/pickles/game.pickle", "wb") as f:
     pickle.dump(game, f)
+
+with open("benchmarks/generated/ordered_edges_policy.json", "w") as f:
+    json.dump(OrderedEdgePolicySerializer.serialize(policy), f)

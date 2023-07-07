@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import Callable, Generator, List, Optional, Set, Union
-from gmpy2 import mpq
+from typing import Callable, Generator, List, Optional, Set, Tuple, Union
+from gmpy2 import mpq, to_binary, from_binary
 import numpy as np
 import drawsvg as dw
 
@@ -46,6 +46,18 @@ class VertexFloat(Vertex):
     def __init__(self, x: float, y: float) -> None:
         self.x = x
         self.y = y
+
+
+class VertexSerializer:
+    SerializedType = Tuple[str, str]
+
+    def serialize(v: Vertex) -> SerializedType:
+        return to_binary(v.x).decode("utf-8"), to_binary(v.y).decode("utf-8")
+
+    def deserialize(ser: SerializedType) -> Vertex:
+        return Vertex(
+            from_binary(ser[0].encode("utf-8")), from_binary(ser[1].encode("utf-8"))
+        )
 
 
 def det(v1: Vertex, v2: Vertex) -> mpq:
@@ -358,6 +370,26 @@ class HalfEdge:
         ) <= dot(self.end - self.start, self.end - self.start)
 
 
+class HalfEdgeSerializer:
+    SerializedType = Tuple[
+        VertexSerializer.SerializedType, VertexSerializer.SerializedType, int
+    ]
+
+    def serialize(he: HalfEdge) -> SerializedType:
+        return (
+            VertexSerializer.serialize(he.start),
+            VertexSerializer.serialize(he.end),
+            he.actions or -1,
+        )
+
+    def deserialize(ser: SerializedType) -> HalfEdge:
+        return HalfEdge(
+            VertexSerializer.deserialize(ser[0]),
+            VertexSerializer.deserialize(ser[1]),
+            actions=ser[2] if ser[2] != -1 else None,
+        )
+
+
 class PolygonGridWorld:
     def __init__(
         self,
@@ -546,6 +578,74 @@ class PolygonGridWorld:
             draw_edge(e, "orange")
         if save:
             d.save_png(filename)
+
+
+class PolygonGridWorldSerializer:
+    SerializedType = Tuple[
+        List[HalfEdgeSerializer.SerializedType],
+        List[int],
+        List[int],
+        List[int],
+        int,
+        int,
+        int,
+    ]
+
+    def __init__(self, gridw: Optional[PolygonGridWorld] = None) -> None:
+        self.gridw = gridw
+        self.half_edges: List[HalfEdge] = []
+
+        def add_he(he: HalfEdge) -> None:
+            self.half_edges.append(he)
+
+        if gridw:
+            gridw.traverse(add_he)
+
+        self.rev_he_index = {he: i for (i, he) in enumerate(self.half_edges)}
+
+    def serialize(self) -> SerializedType:
+        hes = [HalfEdgeSerializer.serialize(he) for he in self.half_edges]
+        nexts = [
+            self.rev_he_index[he] if he else -1
+            for he in map(lambda h: h.next, self.half_edges)
+        ]
+        prevs = [
+            self.rev_he_index[he] if he else -1
+            for he in map(lambda h: h.prev, self.half_edges)
+        ]
+        opps = [
+            self.rev_he_index[he] if he else -1
+            for he in map(lambda h: h.opp, self.half_edges)
+        ]
+
+        root = self.rev_he_index[self.gridw.root] if self.gridw.root else -1
+        target = self.rev_he_index[self.gridw.target] if self.gridw.target else -1
+        grid_size = self.gridw.grid_size if self.gridw.grid_size else -1
+
+        return hes, nexts, prevs, opps, root, target, grid_size
+
+    def deserialize(self, ser: SerializedType) -> PolygonGridWorld:
+        hes, nexts, prevs, opps, root, target, grid_size = ser
+
+        self.half_edges = [HalfEdgeSerializer.deserialize(he) for he in hes]
+
+        for i, n in enumerate(nexts):
+            if n != -1:
+                self.half_edges[i].next = self.half_edges[n]
+
+        for i, p in enumerate(prevs):
+            if p != -1:
+                self.half_edges[i].prev = self.half_edges[p]
+
+        for i, o in enumerate(opps):
+            if o != -1:
+                self.half_edges[i].opp = self.half_edges[o]
+
+        root = self.half_edges[root] if root != -1 else None
+        target = self.half_edges[target] if target != -1 else None
+        grid_size = grid_size if grid_size != -1 else None
+
+        return PolygonGridWorld(root, target, grid_size)
 
 
 def simple_rectangular_polygon_gridw(size=1000) -> PolygonGridWorld:

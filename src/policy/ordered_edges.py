@@ -1,21 +1,48 @@
 from enum import Enum
-from typing import Dict, List, Tuple
-from gmpy2 import mpq
+from typing import Dict, List, Mapping, Optional, Tuple
+from gmpy2 import mpq, to_binary, from_binary
 from src.linpreds import Direction, DirectionSets
 from src.backward_reachability import (
     BackwardReachabilityTree,
     BackwardReachabilityTreeNode,
     VertexInterval,
+    VertexIntervalSerializer,
 )
-from src.polygons import HalfEdge, PolygonGridWorld, Vertex
+from src.polygons import HalfEdge, PolygonGridWorld, PolygonGridWorldSerializer, Vertex
 
 NavigationDirection = Enum("NavigationDirection", ["Up", "Down", "Neutral"])
 
 
+def serialize_nav_dir(nd: NavigationDirection) -> int:
+    if nd == NavigationDirection.Neutral:
+        return 0
+    elif nd == NavigationDirection.Up:
+        return 1
+    elif nd == NavigationDirection.Down:
+        return 2
+
+
+def deserialize_nav_dir(nd: int) -> NavigationDirection:
+    if nd == 0:
+        return NavigationDirection.Neutral
+    elif nd == 1:
+        return NavigationDirection.Up
+    elif nd == 2:
+        return NavigationDirection.Down
+
+
 class EdgeActions:
-    def __init__(self, edge: HalfEdge) -> None:
+    def __init__(
+        self,
+        edge: HalfEdge,
+        targets: Optional[
+            List[Tuple[VertexInterval, NavigationDirection, HalfEdge]]
+        ] = None,
+    ) -> None:
         self.edge = edge
-        self.targets: List[Tuple[VertexInterval, NavigationDirection, HalfEdge]] = []
+        self.targets: List[Tuple[VertexInterval, NavigationDirection, HalfEdge]] = (
+            targets or []
+        )
         self.current_target = 0
 
     def __str__(self) -> str:
@@ -128,17 +155,54 @@ class EdgeActions:
         else:
             raise ValueError
 
+    def serialize(self) -> List[Tuple[str, str]]:
+        return
+
+
+class EdgeActionsSerializer:
+    SerializedType = Tuple[
+        int, List[Tuple[VertexIntervalSerializer.SerializedType, int, int]]
+    ]
+
+    def serialize(ea: EdgeActions, he_index: Dict[HalfEdge, int]) -> SerializedType:
+        return he_index[ea.edge], [
+            (
+                VertexIntervalSerializer.serialize(vi),
+                serialize_nav_dir(nd),
+                he_index[he],
+            )
+            for (vi, nd, he) in ea.targets
+        ]
+
+    def deserialize(ser: SerializedType, he_index: List[HalfEdge]) -> EdgeActions:
+        targets = [
+            (
+                VertexIntervalSerializer.deserialize(vi),
+                deserialize_nav_dir(nd),
+                he_index[he],
+            )
+            for (vi, nd, he) in ser[1]
+        ]
+        return EdgeActions(he_index[ser[0]], targets)
+
 
 class OrderedEdgePolicy:
-    def __init__(self, gridw: PolygonGridWorld) -> None:
+    def __init__(
+        self,
+        gridw: PolygonGridWorld,
+        ea: Optional[Dict[HalfEdge, EdgeActions]] = None,
+        start_edge: Optional[HalfEdge] = None,
+    ) -> None:
         self.gridw = gridw
-        self.built = False
-        self.edge_actions: Dict[HalfEdge, EdgeActions] = dict()
+        self.built = True if ea else False
+        self.edge_actions: Dict[HalfEdge, EdgeActions] = ea if ea else dict()
+        self.start_edge: HalfEdge = start_edge or None
 
     def build(self, btree_depth=100) -> None:
         self.btree = BackwardReachabilityTree(self.gridw)
         self.btree.construct_tree(max_depth=btree_depth)
         self.start_leaf = self.btree.least_depth_begin_leaf()
+        self.start_edge = self.start_leaf.linked_edge
         assert self.start_leaf is not None
 
         curr = self.start_leaf
@@ -162,3 +226,40 @@ class OrderedEdgePolicy:
         assert self.built
         for _, ea in self.edge_actions.items():
             ea.restart()
+
+
+class OrderedEdgePolicySerializer:
+    SerializedType = Tuple[
+        PolygonGridWorldSerializer.SerializedType,
+        List[Tuple[int, EdgeActionsSerializer.SerializedType]],
+        int,
+    ]
+
+    def serialize(p: OrderedEdgePolicy) -> SerializedType:
+        gridw_serializer = PolygonGridWorldSerializer(p.gridw)
+        gridw_ser = gridw_serializer.serialize()
+        eas = [
+            (
+                gridw_serializer.rev_he_index[he],
+                EdgeActionsSerializer.serialize(ea, gridw_serializer.rev_he_index),
+            )
+            for (he, ea) in p.edge_actions.items()
+        ]
+        start_edge = gridw_serializer.rev_he_index[p.start_edge] if p.start_edge else -1
+
+        return gridw_ser, eas, start_edge
+
+    def deserialize(ser: SerializedType) -> OrderedEdgePolicy:
+        gridw_serializer = PolygonGridWorldSerializer()
+        gridw = gridw_serializer.deserialize(ser[0])
+
+        eas = {
+            gridw_serializer.half_edges[he]: EdgeActionsSerializer.deserialize(
+                ea, gridw_serializer.half_edges
+            )
+            for (he, ea) in ser[1]
+        }
+
+        start_edge = gridw_serializer.half_edges[ser[2]] if ser[2] != -1 else None
+
+        return OrderedEdgePolicy(gridw, eas, start_edge)

@@ -1,6 +1,7 @@
+import json
 from src.game.continuous import ContinuousReachabilityGridGame
 from src.game.continuous_gym import ContinuousReachabilityGridGame as GymGame
-from src.policy.ordered_edges import OrderedEdgePolicy
+from src.policy.ordered_edges import OrderedEdgePolicy, OrderedEdgePolicySerializer
 from src.polygons.prism import polygon_grid_to_prism
 from src.backward_reachability import BackwardReachabilityTree
 from src.linpreds import Direction, actions_from_directions
@@ -87,5 +88,16 @@ def main():
     # print(gym.step([0.5]))
     # print(gym.step([1]))
     # gym.draw("clay.png")
+
+    with open("benchmarks/spiral/ordered_edges_policy.json", "w") as f:
+        json.dump(OrderedEdgePolicySerializer.serialize(policy), f)
+
+    with open("benchmarks/spiral/ordered_edges_policy.json", "r") as f:
+        policy_json = json.load(f)
+        policy = OrderedEdgePolicySerializer.deserialize(policy_json)
+
+    game = ContinuousReachabilityGridGame(policy.gridw, policy.start_edge, Vertex(0, 0))
+    success = game.run(policy)
+    print(f"{success}-ly won the game again!")
 
     return gridw, btree

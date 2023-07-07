@@ -1,11 +1,11 @@
 from __future__ import annotations
 from collections import defaultdict
 import math
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 from src.policy import BasePolicy
 from src.linpreds import Direction, DirectionSets
-from src.polygons import HalfEdge, PolygonGridWorld, Vertex, det, dot
-from gmpy2 import mpq
+from src.polygons import HalfEdge, PolygonGridWorld, Vertex, VertexSerializer, det, dot
+from gmpy2 import mpq, to_binary, from_binary
 import drawsvg as dw
 
 
@@ -215,6 +215,20 @@ class VertexInterval:
         return det(v - self.start, self.end - self.start) == 0 and 0 <= dot(
             v - self.start, self.end - self.start
         ) <= dot(self.end - self.start, self.end - self.start)
+
+
+class VertexIntervalSerializer:
+    SerializedType = Tuple[
+        VertexSerializer.SerializedType, VertexSerializer.SerializedType
+    ]
+
+    def serialize(vi: VertexInterval) -> SerializedType:
+        return VertexSerializer.serialize(vi.start), VertexSerializer.serialize(vi.end)
+
+    def deserialize(ser: SerializedType) -> VertexInterval:
+        return VertexInterval(
+            VertexSerializer.deserialize(ser[0]), VertexSerializer.deserialize(ser[1])
+        )
 
 
 class BackwardReachabilityTreeNode:
