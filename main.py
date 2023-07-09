@@ -10,7 +10,7 @@ from src.linpreds import *
 for i in range(1):
     grid_size = 100
     gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=grid_size)
-    gridw = gridw_sampler.sample(n_preds=30)
+    gridw = gridw_sampler.sample(n_preds=50)
     with open("benchmarks/generated/pickles/linpreds.pickle", "wb") as f:
         pickle.dump(gridw, f)
 
