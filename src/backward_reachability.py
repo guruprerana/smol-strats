@@ -135,8 +135,8 @@ class VertexInterval:
             List[VertexInterval]: intersection of self within the specified x-coordinate bounds
         """
         if self.start.x == self.end.x:
-            if (not lower or lower <= self.start.x) and (
-                not upper or self.start.x <= upper
+            if (lower is None or lower <= self.start.x) and (
+                upper is None or self.start.x <= upper
             ):
                 return [self.copy()]
             else:
@@ -177,7 +177,9 @@ class VertexInterval:
         start = min(self.start, self.end, key=lambda v: v.y)
         end = max(self.start, self.end, key=lambda v: v.y)
         if start.y == end.y:
-            if (not lower or lower <= start.y) and (not upper or start.y <= upper):
+            if (lower is None or lower <= start.y) and (
+                upper is None or start.y <= upper
+            ):
                 return [self.copy()]
             else:
                 return []
@@ -216,6 +218,11 @@ class VertexInterval:
             v - self.start, self.end - self.start
         ) <= dot(self.end - self.start, self.end - self.start)
 
+    def inside_triangle(self, triangle: Tuple[Vertex, Vertex, Vertex]) -> bool:
+        return self.start.inside_triangle(triangle) and self.end.inside_triangle(
+            triangle
+        )
+
 
 class VertexIntervalSerializer:
     SerializedType = Tuple[
@@ -245,7 +252,7 @@ class BackwardReachabilityTreeNode:
         self.edge = edge
         self.linked_edge = linked_edge
         self.depth = depth
-        self.backward_nodes = backward_nodes if backward_nodes else list()
+        self.backward_nodes = backward_nodes if backward_nodes is not None else list()
         self.forward_node = forward_node
         self.contains_target = contains_target
         self.contains_begin = (
@@ -362,13 +369,24 @@ class BackwardReachabilityTree(BasePolicy):
                     )
 
                     for new_vi in unexplored_filter:
+                        # we need final filter to remove from triangle above or below the interval
+                        vi_to_add = new_vi
+                        if self._inside_unreachable_triangle(
+                            new_vi, leaf.edge, x_bounds, y_bounds, allowed_actions
+                        ):
+                            if leaf.edge.contains_vertex(new_vi.start):
+                                vi_to_add = VertexInterval(new_vi.start, new_vi.start)
+                            elif leaf.edge.contains_vertex(new_vi.end):
+                                vi_to_add = VertexInterval(new_vi.end, new_vi.end)
+                            else:
+                                continue
                         contains_begin = (
-                            new_vi.contains_vertex(self.begin_point)
+                            vi_to_add.contains_vertex(self.begin_point)
                             if self.begin_point is not None
                             else False
                         )
                         new_node = BackwardReachabilityTreeNode(
-                            new_vi,
+                            vi_to_add,
                             next_edge,
                             leaf.depth + 1,
                             leaf,
@@ -381,6 +399,51 @@ class BackwardReachabilityTree(BasePolicy):
 
         self.leaves = new_leaves
         return added_nodes
+
+    def _inside_unreachable_triangle(
+        self,
+        vi: VertexInterval,
+        edge: VertexInterval,
+        x_bounds: Tuple[Optional[mpq], Optional[mpq]],
+        y_bounds: Tuple[Optional[mpq], Optional[mpq]],
+        allowed_actions: List[Direction],
+    ) -> bool:
+        if edge.contains_vertex(vi.start) and edge.contains_vertex(vi.end):
+            return False
+        if not allowed_actions:
+            # at most one of the vertices is on the edge
+            return True
+        if (Direction.L in allowed_actions and Direction.R in allowed_actions) or (
+            Direction.U in allowed_actions and Direction.D in allowed_actions
+        ):
+            return False
+        edge_slope = edge.end - edge.start
+        if edge_slope.x == 0 or edge_slope.y == 0:
+            return False
+
+        edge_slope = edge_slope.y / edge_slope.x
+        if edge_slope > 0:
+            if (Direction.D in allowed_actions and Direction.L in allowed_actions) or (
+                Direction.U in allowed_actions and Direction.R in allowed_actions
+            ):
+                return False
+        if edge_slope < 0:
+            if (Direction.D in allowed_actions and Direction.R in allowed_actions) or (
+                Direction.U in allowed_actions and Direction.L in allowed_actions
+            ):
+                return False
+
+        x1, x2 = x_bounds[0], x_bounds[1]
+        y1, y2 = y_bounds[0], y_bounds[1]
+        points = ((x1, y1), (x1, y2), (x2, y1), (x2, y2))
+        triangle = list(
+            filter(lambda p: (p[0] is not None) and (p[1] is not None), points)
+        )
+        triangle = [Vertex(x, y) for (x, y) in triangle]
+        triangle.extend((edge.start, edge.end))
+        triangle = tuple(set(triangle))
+        assert len(triangle) == 3
+        return vi.inside_triangle(triangle)
 
     def construct_tree(self, max_depth=100) -> None:
         i = 0
@@ -411,7 +474,13 @@ class BackwardReachabilityTree(BasePolicy):
         )
 
         self.polygrid.draw(
-            None, d, dir_line_width=0, save=False, start_point=start_point
+            None,
+            d,
+            dir_line_width=0,
+            scale=scale,
+            p=p,
+            save=False,
+            start_point=start_point,
         )
 
         def draw_edge(e: VertexInterval, color="white") -> None:

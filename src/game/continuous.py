@@ -64,10 +64,11 @@ class ContinuousReachabilityGridGame:
     def run(self, policy: BasePolicy, max_iter=1000) -> bool:
         target_reached = self.current_edge in self.target_edges
         for _ in range(max_iter):
-            dir_e, target_e = policy.navigate(self.current_coord, self.current_edge)
-            _, _, target_reached = self.step(dir_e, target_e)
             if target_reached:
                 break
+
+            dir_e, target_e = policy.navigate(self.current_coord, self.current_edge)
+            _, _, target_reached = self.step(dir_e, target_e)
 
         return target_reached
 
@@ -92,7 +93,15 @@ class ContinuousReachabilityGridGame:
             )
         )
 
-        self.gridw.draw(None, d, dir_line_width=0, save=False, start_point=start_point)
+        self.gridw.draw(
+            None,
+            d,
+            scale=scale,
+            p=p,
+            dir_line_width=0,
+            save=False,
+            start_point=start_point,
+        )
 
         def draw_edge(e: HalfEdge, color="turquoise") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)

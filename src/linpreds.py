@@ -283,8 +283,6 @@ class LinearPredicatesGridWorld:
         for x in range(grid_size + 1):
             for y in range(grid_size + 1):
                 x_fig, y_fig = p + (x * scale), p + (y * scale)
-                if x == grid_size and y == grid_size:
-                    d.append(dw.Circle(x_fig, y_fig, 2, stroke="red", fill="red"))
                 region = self._region_of_point((x, y), grid_size)
                 for dir in DirectionSets[self.actions[region]]:
                     if dir == Direction.L:
@@ -334,6 +332,10 @@ class LinearPredicatesGridWorld:
                     else:
                         raise ValueError
 
+        start_x, start_y = self.target_pt
+        x_fig, y_fig = float(p + (start_x * scale)), float(p + (start_y * scale))
+        d.append(dw.Circle(x_fig, y_fig, 5, stroke="red", fill="red"))
+
         d.save_png(filename)
 
 
@@ -347,16 +349,22 @@ class LinearPredicatesGridWorldSampler:
         )
 
         boundary_preds = [
-            LinearPredicate((0, 0), (self.predicate_grid_size, 0)),
+            LinearPredicate(
+                (0, 0), (self.predicate_grid_size, 0), self.predicate_grid_size
+            ),
             LinearPredicate(
                 (self.predicate_grid_size, 0),
                 (self.predicate_grid_size, self.predicate_grid_size),
+                self.predicate_grid_size,
             ),
             LinearPredicate(
                 (self.predicate_grid_size, self.predicate_grid_size),
                 (0, self.predicate_grid_size),
+                self.predicate_grid_size,
             ),
-            LinearPredicate((0, self.predicate_grid_size), (0, 0)),
+            LinearPredicate(
+                (0, self.predicate_grid_size), (0, 0), self.predicate_grid_size
+            ),
         ]
 
         preds = []
@@ -367,7 +375,7 @@ class LinearPredicatesGridWorldSampler:
         # we dont want duplicate predicates
         while i_preds < n_preds and iter < MAX_ITER:
             pred = pred_sampler.sample()
-            if pred not in boundary_preds and pred not in preds:
+            if (pred not in boundary_preds) and (pred not in preds):
                 preds.append(pred)
                 i_preds += 1
             iter += 1

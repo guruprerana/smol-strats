@@ -41,6 +41,27 @@ class Vertex:
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
 
+    def inside_triangle(self, triangle: Tuple[Vertex, Vertex, Vertex]) -> bool:
+        v1, v2, v3 = triangle[0], triangle[1], triangle[2]
+
+        d1 = det(v2 - v1, self - v1)
+        if d1 == 0:
+            # lies on the line segment
+            return 0 <= dot(v2 - v1, self - v1) <= dot(v2 - v1, v2 - v1)
+
+        d2 = det(v3 - v2, self - v2)
+        if d2 == 0:
+            return 0 <= dot(v3 - v2, self - v2) <= dot(v3 - v2, v3 - v2)
+
+        d3 = det(v1 - v3, self - v3)
+        if d3 == 0:
+            return 0 <= dot(v1 - v3, self - v3) <= dot(v1 - v3, v1 - v3)
+
+        has_pos = (d1 > 0) or (d2 > 0) or (d3 > 0)
+        has_neg = (d1 < 0) or (d2 < 0) or (d3 < 0)
+
+        return not (has_pos and has_neg)
+
 
 class VertexFloat(Vertex):
     def __init__(self, x: float, y: float) -> None:
@@ -249,7 +270,39 @@ class HalfEdge:
 
         return e1
 
-    def add_intersection_edge(self, e: HalfEdge) -> None:
+    def intersect_polygon(self, e: HalfEdge) -> Tuple[bool, Optional[HalfEdge]]:
+        """Checks if e intersects the polygon containing self HalfEdge in two
+        distinct points and if so, adds appropriate vertices. This method assumes that
+        e intersects this edge at self.end
+
+        Args:
+            e (HalfEdge): The HalfEdge to intersect the polygon with
+
+        Returns:
+            Tuple[bool, Optional[HalfEdge]]: False if does not intersect and True
+            along with the other intersecting HalfEdge of the polygon
+        """
+        intersection = self.intersects_edge(e)
+        assert intersection == self.end
+
+        e_int = self.next.next
+        intersection1 = None
+
+        while e_int != self:
+            intersection1 = e_int.intersects_edge(e)
+            if intersection1:
+                break
+            e_int = e_int.next
+
+        if e_int == self or intersection1 == e_int.start:
+            return False, None
+
+        if intersection1 != e_int.end:
+            e_int = e_int.add_vertex(intersection1)
+
+        return True, e_int
+
+    def add_intersection_edge(self, e: HalfEdge, try_next_opp=False) -> None:
         """Given an edge e, recursively adds edges through the whole graph
         along e
 
@@ -268,21 +321,14 @@ class HalfEdge:
             e1 = self.add_vertex(intersection)
             return e1.add_intersection_edge(e)
 
-        # determine next vertex of intersection in the polygon
-        e_int = self.next.next
-        intersection1 = None
-        while e_int != self:
-            intersection1 = e_int.intersects_edge(e)
-            if intersection1:
-                break
-            e_int = e_int.next
-
-        if e_int == self or intersection1 == e_int.start:
-            raise ValueError
-
-        # intersection1 is either in between e1 or at its end
-        if intersection1 != e_int.end:
-            e_int = e_int.add_vertex(intersection1)
+        intersects_polygon, e_int = self.intersect_polygon(e)
+        if not intersects_polygon and try_next_opp:
+            next_e = self.next.opp
+            while next_e and next_e != self:
+                intersects_polygon, _ = next_e.intersect_polygon(e)
+                if intersects_polygon:
+                    return next_e.add_intersection_edge(e)
+                next_e = next_e.next.opp
 
         # now we need to add halfedges between self.end and e1.end
         divedge = HalfEdge(self.end, e_int.end, e_int.next, self, actions=self.actions)
@@ -298,7 +344,16 @@ class HalfEdge:
         e_int.next = divedge_opp
 
         if e_int.opp:
-            return e_int.opp.prev.add_intersection_edge(e)
+            intersects_polygon, _ = e_int.opp.prev.intersect_polygon(e)
+            if intersects_polygon:
+                return e_int.opp.prev.add_intersection_edge(e)
+
+            next_int = e_int.opp.prev
+            while next_int != e_int and next_int.opp:
+                next_int = next_int.opp.prev
+                intersects_polygon, _ = next_int.intersect_polygon(e)
+                if intersects_polygon:
+                    return next_int.add_intersection_edge(e)
 
     def add_diagonal(self, v: Vertex) -> None:
         """Adds a diagonal edge between self.end and v which is assumed to be an endpoint of
@@ -713,7 +768,7 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
         outer_edges = new_outer_edges
 
         if len(intersecting_edges) > 0:
-            intersecting_edges[0].add_intersection_edge(pred_edge)
+            intersecting_edges[0].add_intersection_edge(pred_edge, try_next_opp=True)
 
     root = outer_edges[0]
     grid_world = PolygonGridWorld(root, grid_size=size)
@@ -732,7 +787,10 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
     grid_world.traverse(assign_actions)
 
     if len(target_edges) == 0:
-        raise ValueError
+        # in a few cases while generating linear predicates, target point can
+        # belong to an "empty" region
+        # we don't want to deal with this at the moment
+        target_edges = [grid_world.root]
 
     grid_world.target = target_edges[0]
     return grid_world
