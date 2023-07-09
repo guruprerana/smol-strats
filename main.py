@@ -7,10 +7,10 @@ from src.backward_reachability import BackwardReachabilityTree
 from src.polygons import *
 from src.linpreds import *
 
-for i in range(100):
-    grid_size = 3
+for i in range(1):
+    grid_size = 50
     gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=grid_size)
-    gridw = gridw_sampler.sample(n_preds=5)
+    gridw = gridw_sampler.sample(n_preds=10)
     gridw.to_prism("benchmarks/generated/generated.prism", grid_size=grid_size)
     gridw.draw(grid_size=grid_size, filename="benchmarks/generated/grid.png")
     with open("benchmarks/generated/pickles/linpreds.pickle", "wb") as f:
@@ -59,9 +59,6 @@ for i in range(100):
 
     policy.restart()
     game.restart()
-
-    with open("benchmarks/generated/pickles/policy.pickle", "wb") as f:
-        pickle.dump(policy, f)
 
     with open("benchmarks/generated/pickles/game.pickle", "wb") as f:
         pickle.dump(game, f)
