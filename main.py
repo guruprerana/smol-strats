@@ -10,13 +10,13 @@ from src.linpreds import *
 for i in range(1):
     grid_size = 100
     gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=grid_size)
-    gridw = gridw_sampler.sample(n_preds=20)
+    gridw = gridw_sampler.sample(n_preds=30)
     with open("benchmarks/generated/pickles/linpreds.pickle", "wb") as f:
         pickle.dump(gridw, f)
 
     polygonw = polygons_from_linpreds(gridw)
-    with open("benchmarks/generated/pickles/polygonw.pickle", "wb") as f:
-        pickle.dump(polygonw, f)
+    # with open("benchmarks/generated/pickles/polygonw.pickle", "wb") as f:
+    #     pickle.dump(polygonw, f)
 
     btree = BackwardReachabilityTree(polygonw, None)
     btree.construct_tree(max_depth=200)
@@ -55,8 +55,8 @@ for i in range(1):
     policy.restart()
     game.restart()
 
-    with open("benchmarks/generated/pickles/game.pickle", "wb") as f:
-        pickle.dump(game, f)
+    # with open("benchmarks/generated/pickles/game.pickle", "wb") as f:
+    #     pickle.dump(game, f)
 
     policy_serialized = OrderedEdgePolicySerializer.serialize(
         policy, start_point=start_point

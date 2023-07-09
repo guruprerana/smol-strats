@@ -251,8 +251,8 @@ class OrderedEdgePolicySerializer:
     ]
 
     def serialize(p: OrderedEdgePolicy, start_point=Vertex(0, 0)) -> SerializedType:
-        gridw_serializer = PolygonGridWorldSerializer(p.gridw, start_point=start_point)
-        gridw_ser = gridw_serializer.serialize()
+        gridw_serializer = PolygonGridWorldSerializer(p.gridw)
+        gridw_ser = gridw_serializer.serialize(start_point=start_point)
         eas = [
             (
                 gridw_serializer.rev_he_index[he],
