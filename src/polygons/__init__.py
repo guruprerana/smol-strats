@@ -677,6 +677,7 @@ class PolygonGridWorldSerializer:
         int,
         int,
         int,
+        VertexSerializer.SerializedType,
     ]
 
     def __init__(self, gridw: Optional[PolygonGridWorld] = None) -> None:
@@ -691,7 +692,7 @@ class PolygonGridWorldSerializer:
 
         self.rev_he_index = {he: i for (i, he) in enumerate(self.half_edges)}
 
-    def serialize(self) -> SerializedType:
+    def serialize(self, start_point=Vertex(0, 0)) -> SerializedType:
         hes = [HalfEdgeSerializer.serialize(he) for he in self.half_edges]
         nexts = [
             self.rev_he_index[he] if he else -1
@@ -710,10 +711,12 @@ class PolygonGridWorldSerializer:
         target = self.rev_he_index[self.gridw.target] if self.gridw.target else -1
         grid_size = self.gridw.grid_size if self.gridw.grid_size else -1
 
-        return hes, nexts, prevs, opps, root, target, grid_size
+        start_point = VertexSerializer.serialize(start_point)
+
+        return hes, nexts, prevs, opps, root, target, grid_size, start_point
 
     def deserialize(self, ser: SerializedType) -> PolygonGridWorld:
-        hes, nexts, prevs, opps, root, target, grid_size = ser
+        hes, nexts, prevs, opps, root, target, grid_size, start_point = ser
 
         self.half_edges = [HalfEdgeSerializer.deserialize(he) for he in hes]
 
