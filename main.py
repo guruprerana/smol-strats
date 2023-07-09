@@ -8,11 +8,9 @@ from src.polygons import *
 from src.linpreds import *
 
 for i in range(1):
-    grid_size = 50
+    grid_size = 100
     gridw_sampler = LinearPredicatesGridWorldSampler(predicate_grid_size=grid_size)
-    gridw = gridw_sampler.sample(n_preds=10)
-    gridw.to_prism("benchmarks/generated/generated.prism", grid_size=grid_size)
-    gridw.draw(grid_size=grid_size, filename="benchmarks/generated/grid.png")
+    gridw = gridw_sampler.sample(n_preds=20)
     with open("benchmarks/generated/pickles/linpreds.pickle", "wb") as f:
         pickle.dump(gridw, f)
 
@@ -48,9 +46,6 @@ for i in range(1):
         "benchmarks/generated/polygons.prism",
         grid_factor=10,
         start_pt=start_point,
-    )
-    btree.draw(
-        filename="benchmarks/generated/backward-graph.png", start_point=start_point
     )
     game.draw(
         filename="benchmarks/generated/ordered-edges-policy-path.png",

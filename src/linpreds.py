@@ -167,25 +167,15 @@ def actions_from_directions(dirs: Iterable[Direction]):
 
 
 class LinearPredicatesGridWorld:
-    def __init__(
-        self,
-        preds: List[LinearPredicate],
-        actions: List[int],
-        target_pt: Point = (0, 0),
-    ) -> None:
+    def __init__(self, preds: List[LinearPredicate]) -> None:
         assert len(preds) > 0
         assert all(
             preds[i].predicate_grid_size == preds[0].predicate_grid_size
             for i in range(1, len(preds))
         )
-        assert len(actions) == 1 << len(preds)
-        assert all(0 <= action < 1 << 4 for action in actions)
-        assert all(0 <= coord <= preds[0].predicate_grid_size for coord in target_pt)
 
         self.preds = preds
         self.predicate_grid_size = preds[0].predicate_grid_size
-        self.actions = actions
-        self.target_pt = target_pt
         self._n_preds = len(preds)
 
     def _region_prism_predicate(self, region: int, grid_size: int) -> str:
@@ -380,10 +370,4 @@ class LinearPredicatesGridWorldSampler:
                 i_preds += 1
             iter += 1
 
-        actions = [random.randrange(0, 1 << 4) for _ in range(1 << n_preds)]
-
-        target_pt = random.randint(0, self.predicate_grid_size), random.randint(
-            0, self.predicate_grid_size
-        )
-
-        return LinearPredicatesGridWorld(preds, actions, target_pt)
+        return LinearPredicatesGridWorld(preds)

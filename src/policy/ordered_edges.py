@@ -207,7 +207,7 @@ class OrderedEdgePolicy:
         self.btree = btree
 
         if start_leaf:
-            assert start_leaf in btree.leaves
+            assert start_leaf in btree.all_leaves
         self.start_leaf = start_leaf
 
     def build(self, btree_depth=1000) -> None:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import random
 from typing import Callable, Generator, List, Optional, Set, Tuple, Union
 from gmpy2 import mpq, to_binary, from_binary
 import numpy as np
@@ -516,6 +517,29 @@ class PolygonGridWorld:
 
                 e1 = e1.next
 
+    def polygons(self) -> Generator[HalfEdge, None, None]:
+        visited: Set[HalfEdge] = set()
+        to_visit = [self.root]
+
+        while len(to_visit) > 0:
+            e = to_visit.pop()
+            if e in visited:
+                continue
+
+            yield e
+            visited.add(e)
+            if e.opp and e.opp not in visited:
+                to_visit.append(e.opp)
+
+            e1 = e.next
+            while e1 != e:
+                visited.add(e1)
+
+                if e1.opp and e1.opp not in visited:
+                    to_visit.append(e1.opp)
+
+                e1 = e1.next
+
     def draw(
         self,
         filename="polygon-grid.png",
@@ -773,24 +797,24 @@ def polygons_from_linpreds(lingrid: LinearPredicatesGridWorld) -> PolygonGridWor
     root = outer_edges[0]
     grid_world = PolygonGridWorld(root, grid_size=size)
 
-    target_region = lingrid._region_of_point(lingrid.target_pt, None)
-    target_edges: List[HalfEdge] = []
+    # def find_target(e: HalfEdge) -> None:
+    #     actions_index = sum(
+    #         1 << i for (i, p) in enumerate(preds_half_edges) if e.determine_side(p)
+    #     )
+    #     if actions_index == target_region:
+    #         target_edges.append(e)
 
-    def assign_actions(e: HalfEdge) -> None:
-        actions_index = sum(
-            1 << i for (i, p) in enumerate(preds_half_edges) if e.determine_side(p)
-        )
-        if actions_index == target_region:
-            target_edges.append(e)
-        e.actions = lingrid.actions[actions_index]
+    # grid_world.traverse(find_target)
 
-    grid_world.traverse(assign_actions)
+    count_polygons = 0
+    for e in grid_world.polygons():
+        e.assign_action_polygon(random.randrange(0, 1 << 4))
+        count_polygons += 1
 
-    if len(target_edges) == 0:
-        # in a few cases while generating linear predicates, target point can
-        # belong to an "empty" region
-        # we don't want to deal with this at the moment
-        target_edges = [grid_world.root]
+    target_index = random.randrange(0, count_polygons)
 
-    grid_world.target = target_edges[0]
+    for i, e in enumerate(grid_world.polygons()):
+        if i == target_index:
+            grid_world.target = e
+
     return grid_world

@@ -304,13 +304,14 @@ class BackwardReachabilityTree(BasePolicy):
             for edge in polygrid.target.edges_in_polygon()
         ]
         self.leaves = self.roots
+        self.all_leaves = set(self.leaves)
 
     def least_depth_begin_leaf(self) -> Optional[BackwardReachabilityTreeNode]:
-        begin_leaves = list(filter(lambda x: x.contains_begin, self.leaves))
+        begin_leaves = list(filter(lambda x: x.contains_begin, self.all_leaves))
         return min(begin_leaves, key=lambda x: x.depth, default=None)
 
     def max_depth_leaf(self) -> BackwardReachabilityTreeNode:
-        return max(self.leaves, key=lambda leaf: leaf.depth)
+        return max(self.all_leaves, key=lambda leaf: leaf.depth)
 
     def grow(self) -> bool:
         """Grows the backward reachability tree by extending the leaves
@@ -323,6 +324,7 @@ class BackwardReachabilityTree(BasePolicy):
         added_nodes = False
 
         for leaf in self.leaves:
+            extended_leaf = False
             if leaf.contains_begin or not leaf.linked_edge.opp:
                 # we don't want to extend this more
                 new_leaves.append(leaf)
@@ -395,8 +397,12 @@ class BackwardReachabilityTree(BasePolicy):
                         added_nodes = True
                         leaf.add_backward_node(new_node)
                         new_leaves.append(new_node)
+                        extended_leaf = True
+                        self.all_leaves.add(new_node)
                         self.edges_to_nodes[vi_next_edge].append(new_node)
 
+            if extended_leaf:
+                self.all_leaves.remove(leaf)
         self.leaves = new_leaves
         return added_nodes
 
