@@ -1,8 +1,8 @@
 mdp
 
 module grid
-	x : [0..1000] init 56;
-	y : [0..1000] init 52;
+	x : [0..1000] init 560;
+	y : [0..1000] init 520;
 
 	
 

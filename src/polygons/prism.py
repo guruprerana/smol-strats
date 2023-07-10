@@ -50,8 +50,8 @@ def polygon_grid_to_prism(
                 "mdp\n",
                 "\n",
                 "module grid\n",
-                f"\tx : [0..{grid_factor*gridw.grid_size}] init {int(start_pt.x)};\n",
-                f"\ty : [0..{grid_factor*gridw.grid_size}] init {int(start_pt.y)};\n",
+                f"\tx : [0..{grid_factor*gridw.grid_size}] init {grid_factor*int(start_pt.x)};\n",
+                f"\ty : [0..{grid_factor*gridw.grid_size}] init {grid_factor*int(start_pt.y)};\n",
                 "\n",
             )
         )
