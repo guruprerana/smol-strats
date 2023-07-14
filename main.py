@@ -64,7 +64,7 @@ for i in range(1):
     )
 
     with open("benchmarks/generated/polygongrid.json", "w") as f:
-        json.dump(policy_serialized[0], f)
+        json.dump((policy_serialized[0], policy_serialized[-1]), f)
 
     with open("benchmarks/generated/subgoals_policy.json", "w") as f:
         json.dump(policy_serialized, f)
