@@ -62,8 +62,12 @@ def main():
         "benchmarks/one_triangle_two_pass/subgoal_policy_pseudocode.txt"
     )
 
+    policy_serialized = SubgoalPolicySerializer.serialize(policy)
+    with open("benchmarks/one_triangle_two_pass/polygongrid.json", "w") as f:
+        json.dump(policy_serialized[0], f)
+
     with open("benchmarks/one_triangle_two_pass/subgoals_policy.json", "w") as f:
-        json.dump(SubgoalPolicySerializer.serialize(policy), f)
+        json.dump(policy_serialized, f)
 
     with open("benchmarks/one_triangle_two_pass/subgoals_policy.json", "r") as f:
         policy_json = json.load(f)

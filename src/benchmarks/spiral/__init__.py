@@ -78,8 +78,12 @@ def main():
 
     policy.to_pseudocode("benchmarks/spiral/subgoal_policy_pseudocode.txt")
 
+    policy_serialized = SubgoalPolicySerializer.serialize(policy)
+    with open("benchmarks/spiral/polygongrid.json", "w") as f:
+        json.dump(policy_serialized[0], f)
+
     with open("benchmarks/spiral/subgoals_policy.json", "w") as f:
-        json.dump(SubgoalPolicySerializer.serialize(policy), f)
+        json.dump(policy_serialized, f)
 
     with open("benchmarks/spiral/subgoals_policy.json", "r") as f:
         policy_json = json.load(f)
