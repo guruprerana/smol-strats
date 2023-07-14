@@ -1,10 +1,9 @@
 import json
 
+from src.policy.subgoals import SubgoalPolicy, SubgoalPolicySerializer
 from src.game.continuous import ContinuousReachabilityGridGame
-from src.game.continuous_gym import ContinuousReachabilityGridGame as GymGame
-from src.policy.ordered_edges import OrderedEdgePolicy, OrderedEdgePolicySerializer
+from src.policy.ordered_edges import OrderedEdgePolicy
 from src.polygons.prism import polygon_grid_to_prism
-from src.backward_reachability import BackwardReachabilityTree
 from src.linpreds import Direction, actions_from_directions
 from src.polygons import Vertex, simple_rectangular_polygon_gridw
 
@@ -34,7 +33,7 @@ gridw.target = gridw.root.next.opp.prev.opp
 def main():
     gridw.draw("benchmarks/one_triangle_two_pass/polygon-grid.png")
 
-    policy = OrderedEdgePolicy(gridw)
+    policy = SubgoalPolicy(gridw)
     policy.build(btree_depth=10)
 
     game = ContinuousReachabilityGridGame(
@@ -45,7 +44,7 @@ def main():
 
     btree = policy.btree
     btree.draw(filename="benchmarks/one_triangle_two_pass/backward-graph.png")
-    game.draw(filename="benchmarks/one_triangle_two_pass/ordered-edges-policy-path.png")
+    game.draw(filename="benchmarks/one_triangle_two_pass/subgoals-policy-path.png")
 
     polygon_grid_to_prism(
         gridw, "benchmarks/one_triangle_two_pass/one_triangle_two_pass.prism", 100
@@ -59,14 +58,20 @@ def main():
     # if terminated:
     #     print(f"Gym game won")
 
-    with open("benchmarks/one_triangle_two_pass/ordered_edges_policy.json", "w") as f:
-        json.dump(OrderedEdgePolicySerializer.serialize(policy), f)
+    policy.to_pseudocode(
+        "benchmarks/one_triangle_two_pass/subgoal_policy_pseudocode.txt"
+    )
 
-    with open("benchmarks/one_triangle_two_pass/ordered_edges_policy.json", "r") as f:
+    with open("benchmarks/one_triangle_two_pass/subgoals_policy.json", "w") as f:
+        json.dump(SubgoalPolicySerializer.serialize(policy), f)
+
+    with open("benchmarks/one_triangle_two_pass/subgoals_policy.json", "r") as f:
         policy_json = json.load(f)
-        policy = OrderedEdgePolicySerializer.deserialize(policy_json)
+        policy = SubgoalPolicySerializer.deserialize(policy_json)
 
-    game = ContinuousReachabilityGridGame(policy.gridw, policy.start_edge, Vertex(0, 0))
+    game = ContinuousReachabilityGridGame(
+        policy.gridw, policy.start_edge, policy.start_point
+    )
     success = game.run(policy)
     print(f"{success}-ly won the game again!")
 

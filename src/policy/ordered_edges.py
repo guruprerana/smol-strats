@@ -1,3 +1,5 @@
+# obsolete file need to remove
+
 from enum import Enum
 from typing import Dict, List, Mapping, Optional, Tuple
 from gmpy2 import mpq, to_binary, from_binary
@@ -8,7 +10,13 @@ from src.backward_reachability import (
     VertexInterval,
     VertexIntervalSerializer,
 )
-from src.polygons import HalfEdge, PolygonGridWorld, PolygonGridWorldSerializer, Vertex
+from src.polygons import (
+    HalfEdge,
+    PolygonGridWorld,
+    PolygonGridWorldSerializer,
+    Vertex,
+    VertexSerializer,
+)
 
 NavigationDirection = Enum("NavigationDirection", ["Up", "Down", "Neutral"])
 
@@ -266,7 +274,8 @@ class OrderedEdgePolicySerializer:
 
     def deserialize(ser: SerializedType) -> OrderedEdgePolicy:
         gridw_serializer = PolygonGridWorldSerializer()
-        gridw = gridw_serializer.deserialize(ser[0])
+        gridw = gridw_serializer.deserialize(ser[0][:-1])
+        start_point = VertexSerializer.deserialize(ser[0][-1])
 
         eas = {
             gridw_serializer.half_edges[he]: EdgeActionsSerializer.deserialize(
@@ -277,4 +286,4 @@ class OrderedEdgePolicySerializer:
 
         start_edge = gridw_serializer.half_edges[ser[2]] if ser[2] != -1 else None
 
-        return OrderedEdgePolicy(gridw, eas, start_edge)
+        return OrderedEdgePolicy(gridw, eas, start_edge, start_point=start_point)
