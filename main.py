@@ -1,5 +1,6 @@
 import json
 import pickle
+from policy.subgoals import SubgoalPolicy, SubgoalPolicySerializer
 from src.polygons.prism import polygon_grid_to_prism
 from src.game.continuous import ContinuousReachabilityGridGame
 from src.policy.ordered_edges import OrderedEdgePolicy, OrderedEdgePolicySerializer
@@ -24,7 +25,7 @@ for i in range(1):
     start_leaf = btree.max_depth_leaf()
     start_edge, start_point = start_leaf.linked_edge, start_leaf.edge.start
 
-    policy = OrderedEdgePolicy(
+    policy = SubgoalPolicy(
         polygonw,
         start_edge=start_edge,
         start_point=start_point,
@@ -48,7 +49,7 @@ for i in range(1):
         start_pt=start_point,
     )
     game.draw(
-        filename="benchmarks/generated/ordered-edges-policy-path.png",
+        filename="benchmarks/generated/subgoals-policy-path.png",
         start_point=start_point,
     )
 
@@ -58,12 +59,12 @@ for i in range(1):
     # with open("benchmarks/generated/pickles/game.pickle", "wb") as f:
     #     pickle.dump(game, f)
 
-    policy_serialized = OrderedEdgePolicySerializer.serialize(
+    policy_serialized = SubgoalPolicySerializer.serialize(
         policy, start_point=start_point
     )
 
     with open("benchmarks/generated/polygongrid.json", "w") as f:
         json.dump(policy_serialized[0], f)
 
-    with open("benchmarks/generated/ordered_edges_policy.json", "w") as f:
+    with open("benchmarks/generated/subgoals_policy.json", "w") as f:
         json.dump(policy_serialized, f)
