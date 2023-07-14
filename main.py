@@ -1,6 +1,6 @@
 import json
 import pickle
-from policy.subgoals import SubgoalPolicy, SubgoalPolicySerializer
+from src.policy.subgoals import SubgoalPolicy, SubgoalPolicySerializer
 from src.polygons.prism import polygon_grid_to_prism
 from src.game.continuous import ContinuousReachabilityGridGame
 from src.policy.ordered_edges import OrderedEdgePolicy, OrderedEdgePolicySerializer
@@ -68,3 +68,5 @@ for i in range(1):
 
     with open("benchmarks/generated/subgoals_policy.json", "w") as f:
         json.dump(policy_serialized, f)
+
+    policy.to_pseudocode("benchmarks/generated/subgoal_policy_pseudocode.txt")
