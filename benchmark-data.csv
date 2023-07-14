@@ -1,0 +1,17 @@
+benchmark             ,problemsize ,policysize ,regions
+one_triangle_two_pass ,       2215 ,      4208 ,      4
+spiral                ,      10833 ,     20847 ,     14
+size100preds20-1      ,     119253 ,    136257 ,    126
+size100preds20-2      ,     108256 ,    130591 ,    115
+size100preds30-1      ,     228676 ,    256031 ,    233
+size100preds30-2      ,     220557 ,    248063 ,    230
+size100preds30-3      ,     221308 ,    244846 ,    227
+size100preds30-4      ,     266882 ,    303592 ,    271
+size100preds50-1      ,     612940 ,    655357 ,    616
+size100preds50-2      ,     668670 ,    706836 ,    668
+size100preds50-3      ,     635978 ,    663439 ,    628
+size100preds50-4      ,     538503 ,    576528 ,    542
+size100preds50-5      ,     603314 ,    641681 ,    616
+size3preds5loopy      ,       8786 ,     15744 ,     11
+size50preds10-1       ,      30669 ,     57926 ,     32
+size50preds20-1       ,     105252 ,    126263 ,    113
