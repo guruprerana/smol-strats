@@ -143,6 +143,10 @@ class HalfEdge:
             yield edge
             edge = edge.next
 
+    def vertices_in_polygon(self) -> Generator[Vertex, None, None]:
+        for edge in self.edges_in_polygon():
+            yield edge.start
+
     def middle_of_polygon(self) -> Vertex:
         v = self.start
         ne = self.next
@@ -538,6 +542,32 @@ class PolygonGridWorld:
                 if e1.opp and e1.opp not in visited:
                     to_visit.append(e1.opp)
 
+                e1 = e1.next
+
+    def edges(self) -> Generator[HalfEdge, None, None]:
+        visited: Set[HalfEdge] = set()
+        to_visit = [self.root]
+
+        while len(to_visit) > 0:
+            e = to_visit.pop()
+            if e in visited:
+                continue
+
+            if not e.opp or e.opp not in visited:
+                yield e
+            visited.add(e)
+            if e.opp and e.opp not in visited:
+                to_visit.append(e.opp)
+
+            e1 = e.next
+            while e1 != e:
+                if e1 not in visited:
+                    if not e1.opp or e1.opp not in visited:
+                        yield e1
+                    visited.add(e1)
+
+                if e1.opp and e1.opp not in visited:
+                    to_visit.append(e1.opp)
                 e1 = e1.next
 
     def draw(

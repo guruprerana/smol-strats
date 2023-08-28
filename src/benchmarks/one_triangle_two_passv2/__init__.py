@@ -43,19 +43,21 @@ gridw.root.navigate("nonnno").assign_action_polygon(
     actions_from_directions([Direction.L, Direction.R])
 )
 
+policy = SubgoalPolicy(gridw, start_point=Vertex(0, 10))
+policy.build(btree_depth=10)
+
+game = ContinuousReachabilityGridGame(
+    gridw, policy.start_leaf.linked_edge, Vertex(0, 10)
+)
+game.run(policy)
+
 
 def main():
+    global gridw, game, policy
     gridw.draw(
         "benchmarks/one_triangle_two_passv2/polygon-grid.png", start_point=Vertex(0, 10)
     )
 
-    policy = SubgoalPolicy(gridw, start_point=Vertex(0, 10))
-    policy.build(btree_depth=10)
-
-    game = ContinuousReachabilityGridGame(
-        gridw, policy.start_leaf.linked_edge, Vertex(0, 10)
-    )
-    success = game.run(policy)
     print(f"{success}-ly won the game")
 
     btree = policy.btree
@@ -104,4 +106,4 @@ def main():
     success = game.run(policy)
     print(f"{success}-ly won the game again!")
 
-    return gridw, btree
+    return gridw, btree, policy, game
