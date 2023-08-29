@@ -260,6 +260,7 @@ class BackwardReachabilityTreeNode:
             if contains_begin is not None
             else edge.contains_vertex(Vertex(0, 0))
         )
+        self._count_leaves = None
 
     def add_backward_node(self, node: BackwardReachabilityTreeNode) -> None:
         self.backward_nodes.append(node)
@@ -273,6 +274,26 @@ class BackwardReachabilityTreeNode:
             res.extend(f"\t{child_str}" for child_str in node.print_str())
 
         return res
+
+    def count_leaves(self) -> int:
+        if self._count_leaves is not None:
+            return self._count_leaves
+
+        if not self.backward_nodes:
+            self._count_leaves = 1
+        else:
+            self._count_leaves = 0
+            for node in self.backward_nodes:
+                self._count_leaves += node.count_leaves()
+
+        return self._count_leaves
+
+    def trim(self, max_depth: int) -> None:
+        if self.depth >= max_depth:
+            self.backward_nodes = []
+        else:
+            for node in self.backward_nodes:
+                node.trim(max_depth)
 
 
 class BackwardReachabilityTree(BasePolicy):
@@ -312,6 +333,10 @@ class BackwardReachabilityTree(BasePolicy):
 
     def max_depth_leaf(self) -> BackwardReachabilityTreeNode:
         return max(self.all_leaves, key=lambda leaf: leaf.depth)
+
+    def trim(self, max_depth: int) -> None:
+        for root in self.roots:
+            root.trim(max_depth)
 
     def grow(self) -> bool:
         """Grows the backward reachability tree by extending the leaves

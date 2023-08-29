@@ -15,3 +15,7 @@ class OneTriangleTwoPassV2BTree(OneTriangleTwoPassV2BTree):
 
 class SpiralBTree(SpiralBTree):
     pass
+
+
+class SpiralPolicy(SpiralPolicy):
+    pass

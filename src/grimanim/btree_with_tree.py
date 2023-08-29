@@ -30,7 +30,10 @@ class BTree(Grid):
             entry_point=game.start_coord,
         )
 
-        self.play(self._gridworld.animate.move_to(np.array([-3, 0, 0])))
+        # trim tree so that spacing of segments becomes good
+        btree.trim(max_depth)
+
+        self.play(self._gridworld.animate.move_to(np.array([-3.5, 0, 0])))
 
         self._node_to_win_polygon: Dict[
             BackwardReachabilityTreeNode, Optional[Polygon]
@@ -38,8 +41,10 @@ class BTree(Grid):
         self._win_polygons = VGroup()
         current_roots = [root for root in btree.roots]
 
-        prev_segments, prev_segment_texts = self._construct_segments(current_roots)
-        prev_segment_texts.next_to(self._gridworld, RIGHT, buff=0.5)
+        prev_segments, prev_segment_texts, prev_y_spaces = self._construct_segments(
+            current_roots, 3, -3
+        )
+        prev_segment_texts.set_x(self._gridworld.get_right()[0] + 1.5)
         self.play(Create(prev_segments))
         self.play(
             *[
@@ -49,21 +54,20 @@ class BTree(Grid):
                 )
             ]
         )
-        self.play(prev_segment_texts.animate.set_color(WHITE))
+        self.play(prev_segment_texts.animate.set_color(WHITE).set_fill(color=WHITE))
 
         for _ in range(max_depth):
             new_roots = []
-            current_polygons: List[
-                Tuple[Polygon, BackwardReachabilityTreeNode, Mobject]
-            ] = []
+            segments = VGroup()
+            segment_texts = VGroup()
+            y_spaces: List[Tuple[float, float]] = list()
             for i, root in enumerate(current_roots):
+                if not root.backward_nodes:
+                    continue
                 vertices = [root.edge.start, root.edge.end]
                 for node in root.backward_nodes:
                     new_roots.append(node)
                     vertices.extend((node.edge.start, node.edge.end))
-
-                if not len(vertices) > 2:
-                    continue
 
                 vertices = [np.array([float(v.x), float(v.y)]) for v in vertices]
                 hull_vertices = ConvexHull(vertices, qhull_options="QJ").vertices
@@ -74,18 +78,10 @@ class BTree(Grid):
                     for i in hull_vertices
                 ]
                 win_polygon = Polygon(*vertices).set_fill(color=BLUE, opacity=0.5)
-                current_polygons.append(
-                    (win_polygon, root, prev_segment_texts.submobjects[i])
-                )
                 self._node_to_win_polygon[root] = win_polygon
                 self._win_polygons.add(win_polygon)
                 self._gridworld.add(win_polygon)
 
-            segments, segment_texts = self._construct_segments(new_roots)
-            segment_texts.next_to(prev_segment_texts, RIGHT, buff=0.5)
-            segment_index = 0
-
-            for win_polygon, root, root_text in current_polygons:
                 self.play(
                     GrowFromPoint(
                         win_polygon,
@@ -93,45 +89,63 @@ class BTree(Grid):
                     )
                 )
 
-                root_segments = VGroup()
-                root_segments_texts = VGroup()
+                (
+                    root_segments,
+                    root_segment_texts,
+                    root_y_spaces,
+                ) = self._construct_segments(
+                    root.backward_nodes, prev_y_spaces[i][0], prev_y_spaces[i][1]
+                )
+                segments.add(*root_segments.submobjects)
+                segment_texts.add(*root_segment_texts.submobjects)
+                y_spaces.extend(root_y_spaces)
+
+                root_segment_texts.set_x(prev_segment_texts.get_right()[0] + 1.5)
+
                 root_arrows = VGroup()
-                for node in root.backward_nodes:
-                    root_segments.add(segments[segment_index])
-                    root_segments_texts.add(segment_texts[segment_index])
+                for j, node in enumerate(root.backward_nodes):
+                    root_text = prev_segment_texts.submobjects[i]
+                    node_text = root_segment_texts.submobjects[j]
                     root_arrows.add(
                         Line(
                             root_text.get_right(),
-                            segment_texts[segment_index].get_left(),
+                            node_text.get_left(),
                             buff=SMALL_BUFF,
                         ).set_stroke(color=GRAY, width=0.5)
                     )
-
-                    segment_index += 1
-
                 self.play(Create(root_segments))
                 self.play(
                     *[
                         Transform(segment, text)
                         for (segment, text) in zip(
-                            root_segments.submobjects, root_segments_texts.submobjects
+                            root_segments.submobjects, root_segment_texts.submobjects
                         )
                     ]
                 )
                 self.play(
-                    Create(root_arrows), root_segments_texts.animate.set_color(WHITE)
+                    Create(root_arrows),
+                    root_segment_texts.animate.set_color(WHITE).set_fill(color=WHITE),
                 )
 
             if not new_roots:
                 break
             current_roots = new_roots
-            prev_segments, prev_segment_texts = segments, segment_texts
+            prev_segments, prev_segment_texts, prev_y_spaces = (
+                segments,
+                segment_texts,
+                y_spaces,
+            )
 
     def _construct_segments(
-        self, nodes: List[BackwardReachabilityTreeNode]
-    ) -> Tuple[VGroup, VGroup]:
+        self, nodes: List[BackwardReachabilityTreeNode], y_max, y_min
+    ) -> Tuple[VGroup, VGroup, List[Tuple[float, float]]]:
         segments = VGroup()
         texts = VGroup()
+
+        if not nodes:
+            return segments, texts
+
+        total_leaves = 0
 
         for node in nodes:
             segment_vertices = self._edge_to_vertices(node.edge)
@@ -149,12 +163,22 @@ class BTree(Grid):
                 Text(f"[{node.edge.start}, {node.edge.end}]", color=YELLOW).scale(0.3)
             )
 
+            total_leaves += node.count_leaves()
+
         texts.arrange(DOWN)
 
-        buff = 6 / len(nodes)
-        start = 3 - (buff / 2)
+        y_spaces = []
+        buff = (y_max - y_min) / total_leaves
+        y_space_begin = y_max
+        y_space_end = y_space_begin - (buff * nodes[0].count_leaves())
+        y_spaces.append((y_space_begin, y_space_end))
+        texts.submobjects[0].set_y((y_space_begin + y_space_end) / 2)
 
-        for i, text in enumerate(texts.submobjects):
-            text.set_y(start - (i * buff))
+        for node, text in zip(nodes[1:], texts.submobjects[1:]):
+            y_space_begin, y_space_end = y_space_end, y_space_end - (
+                buff * node.count_leaves()
+            )
+            y_spaces.append((y_space_begin, y_space_end))
+            text.set_y((y_space_begin + y_space_end) / 2)
 
-        return segments, texts
+        return segments, texts, y_spaces

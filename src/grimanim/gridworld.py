@@ -1,5 +1,5 @@
-from typing import List, Tuple
 from manim import *
+from typing import List, Tuple, Union
 from gmpy2 import mpq
 import numpy as np
 from src.backward_reachability import VertexInterval
@@ -67,7 +67,7 @@ class Grid(Scene):
         self._gridworld.add(*grid_lines)
         return grid_lines
 
-    def _edge_to_line(self, edge: HalfEdge) -> Line:
+    def _edge_to_line(self, edge: Union[HalfEdge, VertexInterval]) -> Line:
         return Line(
             self._scale_coordinates(self._grid, edge.start, self._grid_size),
             self._scale_coordinates(self._grid, edge.end, self._grid_size),
