@@ -1,11 +1,19 @@
 from src.grimanim.benchmarks import *
 
 
-class OneTriangleTwoPassV2(OneTriangleTwoPassV2):
+class OneTriangleTwoPassV2Gridworld(OneTriangleTwoPassV2Gridworld):
     pass
 
 
-class Spiral(Spiral):
+class DiagonalGridworld(DiagonalGridworld):
+    pass
+
+
+class OneTriangleTwoPassV2PolicyPath(OneTriangleTwoPassV2PolicyPath):
+    pass
+
+
+class SpiralPolicyPath(SpiralPolicyPath):
     pass
 
 
@@ -18,4 +26,20 @@ class SpiralBTree(SpiralBTree):
 
 
 class SpiralPolicy(SpiralPolicy):
+    pass
+
+
+class DiagonalPolicyPathDiscrete(DiagonalPolicyPathDiscrete):
+    pass
+
+
+class DiagonalPolicyPathContinuous(DiagonalPolicyPathContinuous):
+    pass
+
+
+class Size3Preds5LoopyBTree(Size3Preds5LoopyBTree):
+    pass
+
+
+class CounterexampleContToDiscrete(CounterexampleContToDiscrete):
     pass

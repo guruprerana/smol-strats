@@ -3,6 +3,7 @@ from src.game.continuous import ContinuousReachabilityGridGame
 from src.polygons import PolygonGridWorld, Vertex
 
 from src.grimanim.gridworld import Grid
+from src.grimanim.colors import *
 
 
 class PolicyPath(Grid):
@@ -36,7 +37,7 @@ class PolicyPath(Grid):
         if animate_path:
             self.play(
                 Create(path),
-                run_time=max(len(game.traversed_edges) / 10, 1),
+                run_time=max(len(game.traversed_edges) / 10, 3),
                 rate_func=rate_functions.ease_in_sine,
             )
         else:

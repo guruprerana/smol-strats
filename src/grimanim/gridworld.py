@@ -5,6 +5,7 @@ import numpy as np
 from src.backward_reachability import VertexInterval
 from src.linpreds import Direction, DirectionSets
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
+from src.grimanim.colors import *
 
 
 class Grid(Scene):
@@ -110,7 +111,7 @@ class Grid(Scene):
                 self._scale_coordinates(grid, edge.start, grid_size),
                 self._scale_coordinates(grid, edge.end, grid_size),
             )
-            l.set_stroke(PURPLE_A)
+            l.set_stroke(PURPLE)
             edges.append(l)
 
         self._gridworld.add(*edges)
@@ -173,6 +174,7 @@ class Grid(Scene):
             self.play(
                 target.animate.set_fill(ORANGE, opacity=0.5), FadeIn(entry_pt_mob)
             )
+            self.wait(2)
         else:
             self.add(entry_pt_mob)
             target.set_fill(ORANGE, opacity=0.5)

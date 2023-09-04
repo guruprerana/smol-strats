@@ -7,6 +7,7 @@ from src.game.continuous import ContinuousReachabilityGridGame
 from src.polygons import HalfEdge, PolygonGridWorld, Vertex
 
 from src.grimanim.gridworld import Grid
+from src.grimanim.colors import *
 
 
 class Policy(Grid):
@@ -36,7 +37,7 @@ class Policy(Grid):
         policy.restart()
 
         self._subgoals_column = VGroup()
-        self._subgoals_column.add(Text("Subgoals", color=TEAL).scale(0.5))
+        self._subgoals_column.add(Text("Subgoals", color=RED).scale(0.5))
         for subgoal in policy.subgoals:
             text = Text(f"[{subgoal.start}, {subgoal.end}]", color=WHITE).scale(0.3)
             self._subgoals_column.add(text)

@@ -9,6 +9,7 @@ from src.game.continuous import ContinuousReachabilityGridGame
 from src.polygons import PolygonGridWorld, Vertex
 
 from src.grimanim.gridworld import Grid
+from src.grimanim.colors import *
 
 
 class BTree(Grid):
