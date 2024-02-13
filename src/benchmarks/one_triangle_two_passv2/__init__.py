@@ -49,13 +49,16 @@ policy.build(btree_depth=10)
 game = ContinuousReachabilityGridGame(
     gridw, policy.start_leaf.linked_edge, Vertex(0, 10)
 )
-game.run(policy)
+success = game.run(policy)
 
 
 def main():
-    global gridw, game, policy
+    global gridw, game, policy, success
     gridw.draw(
-        "benchmarks/one_triangle_two_passv2/polygon-grid.png", start_point=Vertex(0, 10)
+        "benchmarks/one_triangle_two_passv2/polygon-grid.png", 
+        start_point=Vertex(0, 10), 
+        edge_width=7, 
+        start_point_radius=10,
     )
 
     print(f"{success}-ly won the game")
@@ -68,6 +71,8 @@ def main():
     game.draw(
         filename="benchmarks/one_triangle_two_passv2/subgoals-policy-path.png",
         start_point=Vertex(0, 10),
+        edge_width=7,
+        start_point_radius=10,
     )
 
     polygon_grid_to_prism(

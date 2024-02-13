@@ -67,14 +67,14 @@ success = game.run(policy)
 
 
 def main():
-    global gridw, game, policy
-    gridw.draw("benchmarks/spiral/polygon-grid.png")
+    global gridw, game, policy, success
+    gridw.draw("benchmarks/spiral/polygon-grid.png", edge_width=5, start_point_radius=10)
 
     print(f"{success}-ly won the game")
 
     btree = policy.btree
     btree.draw(filename="benchmarks/spiral/backward-graph.png")
-    game.draw(filename="benchmarks/spiral/subgoals-policy-path.png")
+    game.draw(filename="benchmarks/spiral/subgoals-policy-path.png", edge_width=5, start_point_radius=10)
 
     polygon_grid_to_prism(gridw, "benchmarks/spiral/spiral.prism", 100)
 

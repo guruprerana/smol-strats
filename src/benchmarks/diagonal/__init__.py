@@ -27,30 +27,35 @@ policy.build(btree_depth=10)
 game = ContinuousReachabilityGridGame(
     gridw, policy.start_leaf.linked_edge, Vertex(0, 0)
 )
-game.run(policy)
+success = game.run(policy)
 
 
 def main():
-    global gridw, game, policy
+    global gridw, game, policy, success
     gridw.draw(
-        "benchmarks/one_triangle_two_passv2/polygon-grid.png", start_point=Vertex(0, 0)
+        "benchmarks/diagonal/polygon-grid.png", 
+        start_point=Vertex(0, 0),
+        edge_width=5, 
+        start_point_radius=10,
     )
 
     print(f"{success}-ly won the game")
 
     btree = policy.btree
     btree.draw(
-        filename="benchmarks/one_triangle_two_passv2/backward-graph.png",
+        filename="benchmarks/diagonal/backward-graph.png",
         start_point=Vertex(0, 0),
     )
     game.draw(
-        filename="benchmarks/one_triangle_two_passv2/subgoals-policy-path.png",
+        filename="benchmarks/diagonal/subgoals-policy-path.png",
         start_point=Vertex(0, 0),
+        edge_width=5, 
+        start_point_radius=10,
     )
 
     polygon_grid_to_prism(
         gridw,
-        "benchmarks/one_triangle_two_passv2/one_triangle_two_passv2.prism",
+        "benchmarks/diagonal/diagonal.prism",
         100,
         start_pt=Vertex(0, 0),
     )
@@ -64,17 +69,17 @@ def main():
     #     print(f"Gym game won")
 
     policy.to_pseudocode(
-        "benchmarks/one_triangle_two_passv2/subgoal_policy_pseudocode.txt"
+        "benchmarks/diagonal/subgoal_policy_pseudocode.txt"
     )
 
     policy_serialized = SubgoalPolicySerializer.serialize(policy)
-    with open("benchmarks/one_triangle_two_passv2/polygongrid.json", "w") as f:
+    with open("benchmarks/diagonal/polygongrid.json", "w") as f:
         json.dump((policy_serialized[0], policy_serialized[-1]), f)
 
-    with open("benchmarks/one_triangle_two_passv2/subgoals_policy.json", "w") as f:
+    with open("benchmarks/diagonal/subgoals_policy.json", "w") as f:
         json.dump(policy_serialized, f)
 
-    with open("benchmarks/one_triangle_two_passv2/subgoals_policy.json", "r") as f:
+    with open("benchmarks/diagonal/subgoals_policy.json", "r") as f:
         policy_json = json.load(f)
         policy = SubgoalPolicySerializer.deserialize(policy_json)
 

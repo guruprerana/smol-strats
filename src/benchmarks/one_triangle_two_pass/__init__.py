@@ -39,14 +39,14 @@ success = game.run(policy)
 
 
 def main():
-    global gridw, policy, game
-    gridw.draw("benchmarks/one_triangle_two_pass/polygon-grid.png")
+    global gridw, policy, game, success
+    gridw.draw("benchmarks/one_triangle_two_pass/polygon-grid.png", edge_width=5, start_point_radius=10)
 
     print(f"{success}-ly won the game")
 
     btree = policy.btree
     btree.draw(filename="benchmarks/one_triangle_two_pass/backward-graph.png")
-    game.draw(filename="benchmarks/one_triangle_two_pass/subgoals-policy-path.png")
+    game.draw(filename="benchmarks/one_triangle_two_pass/subgoals-policy-path.png", edge_width=5, start_point_radius=10)
 
     polygon_grid_to_prism(
         gridw, "benchmarks/one_triangle_two_pass/one_triangle_two_pass.prism", 100

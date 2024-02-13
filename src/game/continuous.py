@@ -80,6 +80,8 @@ class ContinuousReachabilityGridGame:
         p=20,
         save=True,
         start_point: Vertex = None,
+        edge_width: int = 2,
+        start_point_radius: int = 2,
     ) -> None:
         grid_size = self.gridw.grid_size if self.gridw.grid_size is not None else 1000
         d = (
@@ -101,9 +103,11 @@ class ContinuousReachabilityGridGame:
             dir_line_width=0,
             save=False,
             start_point=start_point,
+            edge_width=edge_width,
+            start_point_radius=start_point_radius,
         )
 
-        def draw_edge(e: HalfEdge, color="turquoise") -> None:
+        def draw_edge(e: HalfEdge, color="#C54D59") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
             d.append(
                 dw.Line(
@@ -111,7 +115,7 @@ class ContinuousReachabilityGridGame:
                     float(p + scale * y1),
                     float(p + scale * x2),
                     float(p + scale * y2),
-                    stroke_width=4,
+                    stroke_width=edge_width,
                     stroke=color,
                 )
             )

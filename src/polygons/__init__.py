@@ -579,6 +579,8 @@ class PolygonGridWorld:
         dir_line_width=30,
         save=True,
         start_point: Vertex = None,
+        edge_width: int = 2,
+        start_point_radius: int = 2,
     ) -> None:
         if not start_point:
             start_point = Vertex(0, 0)
@@ -600,11 +602,11 @@ class PolygonGridWorld:
                 0,
                 (grid_size + 1) * scale + p,
                 (grid_size + 1) * scale + p,
-                fill="black",
+                fill="white",
             )
         )
 
-        def draw_edge(e: HalfEdge, color="magenta") -> None:
+        def draw_edge(e: HalfEdge, color="#42F842") -> None:
             (x1, y1), (x2, y2) = (e.start.x, e.start.y), (e.end.x, e.end.y)
             d.append(
                 dw.Line(
@@ -612,7 +614,7 @@ class PolygonGridWorld:
                     float(p + scale * y1),
                     float(p + scale * x2),
                     float(p + scale * y2),
-                    stroke_width=2,
+                    stroke_width=edge_width,
                     stroke=color,
                 )
             )
@@ -643,7 +645,7 @@ class PolygonGridWorld:
                             y_fig,
                             x_fig - dir_line_width,
                             y_fig,
-                            stroke="green",
+                            stroke="#BE4BDB",
                             stroke_width=2,
                         )
                     )
@@ -654,7 +656,7 @@ class PolygonGridWorld:
                             y_fig,
                             x_fig + dir_line_width,
                             y_fig,
-                            stroke="green",
+                            stroke="#BE4BDB",
                             stroke_width=2,
                         )
                     )
@@ -665,7 +667,7 @@ class PolygonGridWorld:
                             y_fig,
                             x_fig,
                             y_fig + dir_line_width,
-                            stroke="green",
+                            stroke="#BE4BDB",
                             stroke_width=2,
                         )
                     )
@@ -676,23 +678,23 @@ class PolygonGridWorld:
                             y_fig,
                             x_fig,
                             y_fig - dir_line_width,
-                            stroke="green",
+                            stroke="#BE4BDB",
                             stroke_width=2,
                         )
                     )
                 else:
                     raise ValueError
 
-                d.append(dw.Circle(x_fig, y_fig, 2, stroke="white", fill="white"))
+                d.append(dw.Circle(x_fig, y_fig, 2, stroke="black", fill="black"))
 
         self.traverse(draw_edge)
         self.traverse_polygons(draw_directions)
         for e in self.target.edges_in_polygon():
-            draw_edge(e, "orange")
+            draw_edge(e, "#4A78F6")
 
         start_x, start_y = start_point.x, start_point.y
         x_fig, y_fig = float(p + (start_x * scale)), float(p + (start_y * scale))
-        d.append(dw.Circle(x_fig, y_fig, 5, stroke="blue", fill="blue"))
+        d.append(dw.Circle(x_fig, y_fig, start_point_radius, stroke="#FD7E14", fill="#FD7E14"))
 
         if save:
             d.save_png(filename)
