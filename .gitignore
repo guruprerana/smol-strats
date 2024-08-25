@@ -159,8 +159,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+pycarl
+stormpy
 pycarl-2.1.0
-stormpy-1.7.0
+stormpy-1.8.0
 .vscode
 clay.ipynb
 clay.png
